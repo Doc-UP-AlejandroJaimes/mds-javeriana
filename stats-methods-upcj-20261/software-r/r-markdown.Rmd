@@ -1,0 +1,76 @@
+---
+title: "R-Markdown-Sample"
+author: "Alejandro Jaimes"
+date: "2026-02-22"
+output: html_document
+---
+
+# Introducción
+
+En este documento se ilustra el flujo básico de trabajo en RMarkdown: 
+
+1. Generar un conjunto de datos. 
+
+2. Crear una función personalizada. 
+
+3. Aplicar la función a los datos. 
+
+4. Interpretar los resultados de manera estructurada. 
+
+## Generación de datos 
+
+Primero, se generarán datos simulados. Se crea un vector de 100 números aleatorios siguiendo una distribución normal con media 50 y desviación estándar 10.
+
+
+``` r
+# Generar datos 
+set.seed(123) # Para asegurar la reproducibilidad 
+datos <- rnorm(100, mean = 50, sd = 10) 
+# Mostrar un resumen de los datos 
+resultados<-summary(datos) 
+```
+
+## Definición de la función personalizada Se define una función que: 
+
+- Recibe un vector numérico. 
+
+- Calcula la diferencia entre cada elemento y el promedio del vector. 
+
+- Retorna un nuevo vector con las diferencias. 
+
+
+``` r
+# Definición de la función 
+diferencias_con_media <- function(x) {
+  media_x <- mean(x) 
+  diferencias <- x - media_x 
+  return(diferencias)} 
+```
+
+## Aplicación de la función La función `diferencias_con_media` se aplicará al conjunto de datos para calcular cuánto se aleja cada valor respecto a la media. 
+
+
+``` r
+# Aplicar la función a los datos 
+resultado_diferencias <- diferencias_con_media(datos) 
+resultado_diferencias
+```
+
+## Interpretación de los resultados 
+
+Cada valor obtenido representa la distancia del valor original respecto a la media del conjunto de datos: 
+
+* Valores positivos indican que el valor es mayor que la media. 
+
+* Valores negativos indican que el valor es menor que la media. 
+
+* Valores cercanos a cero indican proximidad a la media. 
+
+Adicionalmente, debido a la propiedad de las desviaciones respecto a la media, el promedio de las diferencias debería ser cercano a cero: 
+
+
+``` r
+# Verificar que el promedio de las diferencias es cercano a cero 
+promedio<-mean(resultado_diferencias) 
+promedio
+```
