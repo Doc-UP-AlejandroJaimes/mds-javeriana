@@ -1,0 +1,1389 @@
+---
+title: "Informe Estadístico - Segmentación de Clientes"
+subtitle: "Métodos y Simulación Estadística · Actividad 1 · 2026-A"
+author: "Juan Alejandro Carrillo Jaimes"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = 'center',
+  out.width = '85%',
+  encoding  = "UTF-8"
+)
+options(scipen = 999)
+```
+
+---
+
+> **Nota para la profesora**
+>
+> Profesora, espero que esté muy bien. Quiero agradecerle por su conocimiento y dedicación en este módulo, que ha sido muy enriquecedor para mi formación. Todo mi proceso de aprendizaje lo he documentado en mi repositorio de GitHub, por si desea consultarlo:
+>
+> **Repositorio:** https://github.com/Doc-UP-AlejandroJaimes/mds-javeriana/tree/develop/stats-methods-upcj-20261
+>
+> **Apuntes — Unidad 1:** Análisis Exploratorio de Datos: https://innovative-author-32a.notion.site/Unidad-1-An-lisis-Exploratorio-de-Datos-2fce190785678084af39e2e3112e0d94?pvs=73
+
+---
+
+# Descripción
+
+Una empresa busca maximizar la rentabilidad de su sexta campaña de marketing directo, orientada a la venta de un nuevo dispositivo entre clientes existentes. Para ello, realizó una campaña piloto con un subconjunto aleatorio de clientes contactados telefónicamente, registrando quiénes aceptaron la oferta. El presente informe analiza la base de datos resultante con el fin de caracterizar los perfiles de clientes según su respuesta a la campaña.
+
+# Objetivos
+
+## Objetivo General
+
+Caracterizar los perfiles de clientes de la campaña piloto mediante el análisis descriptivo de sus variables sociodemográficas, económicas y de comportamiento de compra, distinguiendo entre quienes aceptaron y rechazaron la oferta.
+
+## Objetivos Específicos
+
+1. Depurar y validar la base de datos de la campaña piloto mediante la detección y tratamiento de registros duplicados, inconsistencias, valores atípicos y datos faltantes, garantizando la calidad de la información para el análisis posterior.
+
+2. Realizar un análisis exploratorio descriptivo de las variables del conjunto de datos, examinando su distribución, tendencia central, variabilidad y relaciones bivariadas, con el fin de identificar patrones relevantes en el comportamiento de los clientes.
+
+3. Explorar la relación entre el nivel de ingresos, el perfil sociodemográfico y el comportamiento de gasto de los clientes, identificando características asociadas a una mayor propensión de aceptación de las ofertas de campaña.
+
+# Datos
+
+La base de datos utilizada corresponde al archivo `segmentation-customers.xlsx`, el cual es equivalente al archivo `data_actividad1.xlsx` propuesto en la actividad. Contiene información de la campaña piloto realizada por la empresa, con **2.220 registros** y **37 variables** que recogen información sociodemográfica, económica y de comportamiento de compra de los clientes.
+```{r cargadatos}
+library(readxl)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+df <- read_excel("segmentation-customers.xlsx", sheet = "data")
+
+dim(df)
+```
+
+Para la clasificación de las variables se utilizan las siguientes convenciones:
+
+| Sigla | Tipo de variable |
+|:-----:|:----------------|
+| CC | Cuantitativa Continua |
+| CD | Cuantitativa Discreta |
+| CO | Cualitativa Ordinal |
+| CN | Cualitativa Nominal |
+**Tabla 3.1.** Descripción y clasificación de las variables del dataset
+```{r tablavariables}
+variables_df <- data.frame(
+  Variable = c(
+    "Income", "Kidhome", "Teenhome", "Recency",
+    "MntWines", "MntFruits", "MntMeatProducts", "MntFishProducts",
+    "MntSweetProducts", "MntGoldProds", "NumDealsPurchases",
+    "NumWebPurchases", "NumCatalogPurchases", "NumStorePurchases",
+    "NumWebVisitsMonth", "AcceptedCmp1", "AcceptedCmp2", "AcceptedCmp3",
+    "AcceptedCmp4", "AcceptedCmp5", "AcceptedCmpOverall", "Response",
+    "Complain", "Customer_Days", "marital_Divorced", "marital_Married",
+    "marital_Single", "marital_Together", "marital_Widow",
+    "education_2n Cycle", "education_Basic", "education_Graduation",
+    "education_Master", "education_PhD", "Age", "MntTotal", "MntRegularProds"
+  ),
+  Descripcion = c(
+    "Ingreso anual del hogar del cliente",
+    "Número de niños pequeños en el hogar",
+    "Número de adolescentes en el hogar",
+    "Días transcurridos desde la última compra",
+    "Gasto en vinos (últimos 2 años)",
+    "Gasto en frutas (últimos 2 años)",
+    "Gasto en productos cárnicos (últimos 2 años)",
+    "Gasto en productos de pescado (últimos 2 años)",
+    "Gasto en productos dulces (últimos 2 años)",
+    "Gasto en productos de oro (últimos 2 años)",
+    "Número de compras realizadas con descuento",
+    "Número de compras realizadas por la web",
+    "Número de compras realizadas por catálogo",
+    "Número de compras realizadas en tienda física",
+    "Número de visitas al sitio web en el último mes",
+    "1 si aceptó la oferta en la 1ª campaña, 0 si no",
+    "1 si aceptó la oferta en la 2ª campaña, 0 si no",
+    "1 si aceptó la oferta en la 3ª campaña, 0 si no",
+    "1 si aceptó la oferta en la 4ª campaña, 0 si no",
+    "1 si aceptó la oferta en la 5ª campaña, 0 si no",
+    "Número total de campañas aceptadas",
+    "1 si aceptó la oferta en la última campaña, 0 si no",
+    "1 si el cliente realizó una queja en los últimos 2 años",
+    "Días transcurridos desde el registro del cliente",
+    "1 si el cliente está divorciado, 0 si no",
+    "1 si el cliente está casado, 0 si no",
+    "1 si el cliente es soltero, 0 si no",
+    "1 si el cliente tiene pareja, 0 si no",
+    "1 si el cliente es viudo, 0 si no",
+    "1 si tiene educación de segundo ciclo, 0 si no",
+    "1 si tiene educación básica, 0 si no",
+    "1 si tiene licenciatura, 0 si no",
+    "1 si tiene maestría, 0 si no",
+    "1 si tiene doctorado, 0 si no",
+    "Edad del cliente",
+    "Gasto total en todos los productos",
+    "Gasto total en productos regulares"
+  ),
+  Tipo = c(
+    "CC", "CD", "CD", "CD",
+    "CC", "CD", "CD", "CD", "CD", "CD",
+    "CD", "CD", "CD", "CD", "CD",
+    "CN", "CN", "CN", "CN", "CN",
+    "CD", "CN", "CN", "CD",
+    "CN", "CN", "CN", "CN", "CN",
+    "CN", "CN", "CN", "CN", "CN",
+    "CD", "CC", "CC"
+  )
+)
+
+kable(variables_df,
+      col.names = c("Variable", "Descripción", "Tipo"),
+      align = c("l", "l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE,
+                font_size = 13)
+```
+# Procesamiento
+
+## Errores e Inconsistencias
+
+### Registros Duplicados
+
+Antes de cualquier análisis, se verificó la existencia de registros duplicados en el dataset.
+```{r duplicados}
+# Total duplicates
+n_duplicados <- sum(duplicated(df))
+n_total      <- nrow(df)
+
+cat("Registros totales:    ", n_total, "\n")
+cat("Registros duplicados: ", n_duplicados, "\n")
+cat("Porcentaje:           ", round(n_duplicados / n_total * 100, 2), "%\n\n")
+
+# Show one duplicate pair to confirm they are identical
+dup_rows  <- which(duplicated(df))
+first_dup <- df[dup_rows[1], ]
+orig_idx  <- which(apply(df, 1, function(x) identical(as.numeric(x), as.numeric(first_dup))))[1]
+
+cat("Par de registros duplicados (fila original vs. copia):\n")
+rbind(
+  data.frame(Registro = "Original", df[orig_idx, ]),
+  data.frame(Registro = "Duplicado", first_dup)
+) |>
+  kable(col.names = c("Registro", names(df))) |>
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                full_width = TRUE, font_size = 11) |>
+  scroll_box(width = "100%")
+
+# Summary table: unique values per variable across duplicated rows
+df_dups <- df[duplicated(df), ]
+
+dup_summary <- data.frame(
+  Variable        = names(df_dups),
+  Valores_unicos  = sapply(df_dups, function(x) length(unique(x)))
+)
+
+cat("\n")
+kable(dup_summary,
+      col.names = c("Variable", "Valores únicos en registros duplicados"),
+      align     = c("l", "c"),
+      caption   = NULL) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12)
+
+# Remove duplicates keeping first occurrence
+df <- df[!duplicated(df), ]
+cat("\nRegistros tras eliminación de duplicados:", nrow(df), "\n")
+```
+Al revisar los registros duplicados, se encontró que **`r n_duplicados` filas** son copias exactas de otras observaciones en todas sus variables. Dado que cada fila representa un cliente único, no tiene sentido que dos registros sean idénticos en variables como el ingreso, la edad y el historial de compras simultáneamente. Por esta razón, se decidió eliminarlos conservando la primera ocurrencia, quedando el dataset con **`r nrow(df)` registros** para el análisis.
+## Análisis de Datos Atípicos
+
+### Inconsistencias
+
+Antes de identificar valores atípicos mediante métodos estadísticos, se revisaron inconsistencias lógicas en el dataset, es decir, valores que son imposibles o incoherentes dado el contexto de las variables.
+```{r inconsistencias}
+# Age: values out of logical range
+cat("Valores de Age fuera de rango (>100 o <18):\n")
+df[df$Age > 100 | df$Age < 18, "Age", drop = FALSE] |>
+  kable(col.names = "Age") |>
+  kable_styling(bootstrap_options = c("striped"), full_width = FALSE)
+
+# marital_Divorced: should only be 0 or 1
+cat("\nValores inválidos en marital_Divorced (distinto de 0 o 1):\n")
+df[!df$marital_Divorced %in% c(0, 1), "marital_Divorced", drop = FALSE] |>
+  kable(col.names = "marital_Divorced") |>
+  kable_styling(bootstrap_options = c("striped"), full_width = FALSE)
+
+# MntRegularProds: negative values are impossible
+cat("\nValores negativos en MntRegularProds:\n")
+df[df$MntRegularProds < 0, "MntRegularProds", drop = FALSE] |>
+  kable(col.names = "MntRegularProds") |>
+  kable_styling(bootstrap_options = c("striped"), full_width = FALSE)
+```
+
+Se identificaron tres inconsistencias lógicas en el dataset:
+
+- **`Age`**: se encontró un registro con edad igual a **240 años**, valor imposible para un cliente real. Se trata de un error de captura, por lo que se reemplaza por `NA` para su posterior imputación.
+
+- **`marital_Divorced`**: esta variable es binaria (0 o 1), sin embargo se encontraron **6 registros** con valor **100**, lo cual no corresponde a ninguna categoría válida. Estos valores se reemplazan por `NA`.
+
+- **`MntRegularProds`**: el gasto en productos no puede ser negativo. Se encontró al menos un registro con valor **-283**, que se reemplaza por `NA`.
+```{r correccion_inconsistencias}
+# Fix Age
+df$Age[df$Age > 100 | df$Age < 18] <- NA
+
+# Fix marital_Divorced
+df$marital_Divorced[!df$marital_Divorced %in% c(0, 1)] <- NA
+
+# Fix MntRegularProds
+df$MntRegularProds[df$MntRegularProds < 0] <- NA
+
+cat("NAs generados tras corrección de inconsistencias:\n")
+data.frame(
+  Variable = c("Age", "marital_Divorced", "MntRegularProds"),
+  NAs_generados = c(
+    sum(is.na(df$Age)),
+    sum(is.na(df$marital_Divorced)),
+    sum(is.na(df$MntRegularProds))
+  )
+) |>
+  kable(col.names = c("Variable", "NAs generados"),
+        align = c("l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE)
+```
+### Valores Atípicos
+
+Para la detección de valores atípicos se utilizó el método del rango intercuartílico (IQR). Un valor se considera atípico si se encuentra por fuera de los límites definidos como:
+
+$$LI = Q_1 - 1.5 \times IQR \qquad LS = Q_3 + 1.5 \times IQR$$
+
+donde $Q_1$ y $Q_3$ corresponden al primer y tercer cuartil respectivamente, e $IQR = Q_3 - Q_1$.
+```{r deteccion_atipicos}
+library(ggplot2)
+library(tidyr)
+
+# Variables to analyze
+vars_num <- c("Income", "Age", "Recency", "Customer_Days",
+              "MntWines", "MntFruits", "MntMeatProducts", "MntFishProducts",
+              "MntSweetProducts", "MntGoldProds", "MntTotal", "MntRegularProds",
+              "NumDealsPurchases", "NumWebPurchases", "NumCatalogPurchases",
+              "NumStorePurchases", "NumWebVisitsMonth")
+
+# Function to detect outliers using IQR
+detect_outliers <- function(x) {
+  x   <- na.omit(x)
+  q1  <- quantile(x, 0.25)
+  q3  <- quantile(x, 0.75)
+  iqr <- q3 - q1
+  li  <- q1 - 1.5 * iqr
+  ls  <- q3 + 1.5 * iqr
+  sum(x < li | x > ls)
+}
+
+# Summary table
+outlier_summary <- data.frame(
+  Variable       = vars_num,
+  N_atipicos     = sapply(vars_num, function(v) detect_outliers(df[[v]])),
+  Pct_atipicos   = sapply(vars_num, function(v) 
+                     round(detect_outliers(df[[v]]) / sum(!is.na(df[[v]])) * 100, 2)),
+  Min            = sapply(vars_num, function(v) round(min(df[[v]], na.rm = TRUE), 1)),
+  Max            = sapply(vars_num, function(v) round(max(df[[v]], na.rm = TRUE), 1)),
+  Media          = sapply(vars_num, function(v) round(mean(df[[v]], na.rm = TRUE), 1)),
+  Mediana        = sapply(vars_num, function(v) round(median(df[[v]], na.rm = TRUE), 1))
+)
+
+kable(outlier_summary,
+      col.names = c("Variable", "N atípicos", "% atípicos", "Mín", "Máx", "Media", "Mediana"),
+      align = c("l", "c", "c", "r", "r", "r", "r")) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12)
+```
+
+**Figura 4.1.** Distribución de variables numéricas con identificación de valores atípicos
+```{r boxplots_atipicos, fig.height=10, fig.width=10}
+df |>
+  select(all_of(vars_num)) |>
+  pivot_longer(cols = everything(),
+               names_to  = "Variable",
+               values_to = "Valor") |>
+  ggplot(aes(x = Variable, y = Valor)) +
+  geom_boxplot(fill = "#4E79A7", color = "#2C3E50",
+               outlier.color = "red", outlier.size = 1.2, alpha = 0.7) +
+  facet_wrap(~ Variable, scales = "free", ncol = 4) +
+  theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x  = element_blank(),
+    axis.ticks.x = element_blank(),
+    strip.text   = element_text(face = "bold", size = 9)
+  ) +
+  labs(x = NULL, y = "Valor")
+```
+**Tabla 4.2.** Indicadores de tendencia central
+```{r tcental}
+library(psych)
+
+desc <- describe(df[, vars_num]) |> as.data.frame() |> round(2)
+desc$Variable <- vars_num
+rownames(desc) <- NULL
+
+desc |>
+  select(Variable, mean, median) |>
+  kable(col.names = c("Variable", "Media", "Mediana"),
+        align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12)
+```
+
+**Tabla 4.3.** Indicadores de posición
+```{r posicion}
+data.frame(
+  Variable = vars_num,
+  Q1  = sapply(vars_num, function(v) round(quantile(df[[v]], 0.25, na.rm = TRUE), 2)),
+  Q2  = sapply(vars_num, function(v) round(quantile(df[[v]], 0.50, na.rm = TRUE), 2)),
+  Q3  = sapply(vars_num, function(v) round(quantile(df[[v]], 0.75, na.rm = TRUE), 2)),
+  Min = sapply(vars_num, function(v) round(min(df[[v]], na.rm = TRUE), 2)),
+  Max = sapply(vars_num, function(v) round(max(df[[v]], na.rm = TRUE), 2))
+) |>
+  kable(col.names = c("Variable", "Q1", "Q2 (Mediana)", "Q3", "Mín", "Máx"),
+        align = c("l", rep("c", 5))) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12)
+```
+
+**Tabla 4.4.** Indicadores de variabilidad
+```{r variabilidad}
+desc |>
+  select(Variable, sd, se, skew, kurtosis) |>
+  mutate(IQR = sapply(vars_num, function(v) round(IQR(df[[v]], na.rm = TRUE), 2))) |>
+  select(Variable, sd, IQR, se, skew, kurtosis) |>
+  kable(col.names = c("Variable", "Desv. Estándar", "IQR", "Error Estándar", "Sesgo", "Curtosis"),
+        align = c("l", rep("c", 5))) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12)
+```
+
+Las variables de gasto por categoría muestran medianas cercanas a cero con medias considerablemente más altas y valores de sesgo superiores a 2, confirmando distribuciones fuertemente asimétricas hacia la derecha. Esto se evidencia en la Figura 4.2, donde las cajas están comprimidas en la parte inferior con alambres y puntos atípicos concentrados hacia arriba. Dado que este patrón refleja un comportamiento de consumo real, se decide **conservar los valores atípicos** detectados.
+
+**Figura 4.2.** Distribución de variables de gasto por categoría
+```{r boxplotgasto, fig.height=5, fig.width=10}
+vars_gasto <- c("MntWines", "MntFruits", "MntMeatProducts",
+                "MntFishProducts", "MntSweetProducts", "MntGoldProds")
+
+df |>
+  select(all_of(vars_gasto)) |>
+  pivot_longer(cols = everything(),
+               names_to  = "Variable",
+               values_to = "Valor") |>
+  ggplot(aes(x = Variable, y = Valor, fill = Variable)) +
+  geom_boxplot(outlier.color = "red", outlier.size = 1.5, alpha = 0.7) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 15, hjust = 1)) +
+  labs(x = "Categoría de producto", y = "Gasto (últimos 2 años)")
+```
+
+## Manejo de Valores Atípicos
+
+Como se estableció anteriormente, los valores atípicos detectados en las variables de gasto corresponden a comportamientos reales de consumo, por lo que la decisión fue **conservarlos**. Sin embargo, para documentar el impacto de esta decisión, se presenta a continuación una tabla comparativa de los indicadores antes y después del tratamiento de inconsistencias.
+
+**Tabla 4.5.** Comparación de indicadores antes y después del tratamiento de inconsistencias
+```{r comparativa}
+df_before <- read_excel("segmentation-customers.xlsx", sheet = "data")
+df_before <- df_before[!duplicated(df_before), ]
+
+vars_comp <- c("Age", "MntRegularProds", "Income",
+               "MntWines", "MntFruits", "MntMeatProducts",
+               "MntFishProducts", "MntSweetProducts", "MntGoldProds")
+
+comparativa <- data.frame(
+  Variable       = vars_comp,
+  Media_antes    = sapply(vars_comp, function(v) round(mean(df_before[[v]], na.rm=TRUE), 1)),
+  Media_despues  = sapply(vars_comp, function(v) round(mean(df[[v]], na.rm=TRUE), 1)),
+  SD_antes       = sapply(vars_comp, function(v) round(sd(df_before[[v]], na.rm=TRUE), 1)),
+  SD_despues     = sapply(vars_comp, function(v) round(sd(df[[v]], na.rm=TRUE), 1)),
+  NAs_antes      = sapply(vars_comp, function(v) sum(is.na(df_before[[v]]))),
+  NAs_despues    = sapply(vars_comp, function(v) sum(is.na(df[[v]])))
+)
+rownames(comparativa) <- NULL
+
+kable(comparativa,
+      col.names = c("Variable", "Media antes", "Media después",
+                    "SD antes", "SD después", "NAs antes", "NAs después"),
+      align = c("l", rep("c", 6))) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12)
+```
+
+**Figura 4.3.** Impacto del tratamiento de inconsistencias en la distribución de variables afectadas
+```{r comparativaplot, fig.height=5, fig.width=10}
+library(tidyr)
+library(dplyr)
+
+# Build long format for before/after comparison
+df_plot_before <- df_before |>
+  select(all_of(vars_comp)) |>
+  mutate(Estado = "Antes")
+
+df_plot_after <- df |>
+  select(all_of(vars_comp)) |>
+  mutate(Estado = "Después")
+
+bind_rows(df_plot_before, df_plot_after) |>
+  pivot_longer(cols = all_of(vars_comp),
+               names_to  = "Variable",
+               values_to = "Valor") |>
+  ggplot(aes(x = Estado, y = Valor, fill = Estado)) +
+  geom_boxplot(outlier.color = "red", outlier.size = 0.8, alpha = 0.7) +
+  facet_wrap(~ Variable, scales = "free_y", ncol = 3) +
+  scale_fill_manual(values = c("Antes" = "#E15759", "Después" = "#4E79A7")) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom",
+        strip.text = element_text(face = "bold")) +
+  labs(x = NULL, y = "Valor", fill = NULL)
+```
+
+La Figura 4.3 muestra que el impacto del tratamiento fue mínimo en las variables de gasto, ya que solo se corrigieron inconsistencias puntuales (`Age = 240`, `marital_Divorced = 100`, `MntRegularProds < 0`). Las distribuciones antes y después son prácticamente idénticas, lo que confirma que las decisiones tomadas no alteraron la estructura general de los datos.
+
+**Tabla 4.6.** Indicadores descriptivos actualizados tras el tratamiento de inconsistencias
+```{r indicadoresactualizados}
+desc_actual <- describe(df[, vars_comp]) |> as.data.frame() |> round(2)
+desc_actual$Variable <- vars_comp
+rownames(desc_actual) <- NULL
+
+desc_actual |>
+  select(Variable, mean, median, sd, min, max, skew, kurtosis) |>
+  kable(col.names = c("Variable", "Media", "Mediana", "DE", "Mín", "Máx", "Sesgo", "Curtosis"),
+        align = c("l", rep("c", 7))) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 12)
+```
+
+Comparando con los indicadores previos al tratamiento, los cambios más notables se observan en `Age`, cuya desviación estándar pasó de 13.0 a 11.6 y el valor máximo de 240 a 80, reflejando la corrección del error de captura. En `MntRegularProds` desaparece el valor negativo, ajustando ligeramente su mínimo. El resto de variables mantienen indicadores estables, confirmando que el tratamiento fue puntual y no introdujo distorsiones en la distribución general de los datos.
+
+## Identificación de Datos Faltantes
+```{r faltantes}
+missing_df <- data.frame(
+  Variable      = names(df),
+  N_faltantes   = sapply(df, function(x) sum(is.na(x))),
+  Pct_faltantes = sapply(df, function(x) round(sum(is.na(x)) / nrow(df) * 100, 2))
+) |>
+  filter(N_faltantes > 0) |>
+  arrange(desc(Pct_faltantes))
+rownames(missing_df) <- NULL
+
+kable(missing_df,
+      col.names = c("Variable", "N faltantes", "% faltantes"),
+      align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, font_size = 12)
+```
+
+**Figura 4.5.** Porcentaje de datos faltantes por variable
+```{r barrafaltantes, fig.height=3.5, fig.width=6}
+ggplot(missing_df, aes(x = reorder(Variable, Pct_faltantes), y = Pct_faltantes)) +
+  geom_col(fill = "#E15759", alpha = 0.85) +
+  geom_text(aes(label = paste0(Pct_faltantes, "%")),
+            hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  labs(x = NULL, y = "% de datos faltantes") +
+  ylim(0, max(missing_df$Pct_faltantes) * 1.3)
+```
+
+**Figura 4.6.** Patrón de coincidencia de datos faltantes
+```{r patronfaltantes, fig.height=4, fig.width=7}
+library(naniar)
+gg_miss_upset(df, nsets = 5)
+```
+
+El dataset presenta datos faltantes en **`r nrow(missing_df)` variables** tras el tratamiento de inconsistencias. `Income` concentra el mayor porcentaje con **`r missing_df$Pct_faltantes[missing_df$Variable == "Income"]`%** (`r missing_df$N_faltantes[missing_df$Variable == "Income"]` registros), seguida de `MntWines` con **`r missing_df$Pct_faltantes[missing_df$Variable == "MntWines"]`%** (`r missing_df$N_faltantes[missing_df$Variable == "MntWines"]` registros). Las variables `Age`, `marital_Divorced` y `MntRegularProds` tienen faltantes marginales producto de la corrección de inconsistencias. En conjunto, el volumen de datos faltantes es bajo, lo que facilita su tratamiento sin comprometer la integridad del dataset.
+
+El gráfico UpSet se eligió porque permite responder una pregunta clave: ¿los datos faltantes de distintas variables ocurren en las **mismas filas** o en filas **independientes**? Esto es importante porque si los faltantes siempre coinciden en los mismos registros, podría indicar un patrón sistemático (MAR o MNAR). Si en cambio cada variable tiene faltantes en filas distintas y sin coincidencias, es una señal de que ocurren al azar (MCAR).
+
+Las barras horizontales de la izquierda muestran cuántos faltantes tiene cada variable en total. Las barras verticales superiores muestran cuántos registros tienen ese patrón de faltantes específico. Los puntos conectados indican qué variables comparten faltantes en los mismos registros.
+
+La Figura 4.6 muestra que los faltantes de cada variable ocurren en filas completamente distintas — las barras verticales más altas tienen un solo punto activo, lo que indica independencia entre los patrones de ausencia. Solo 2 registros comparten faltantes en más de una variable simultáneamente, lo cual es marginal. Esta independencia es una primera señal visual de que los datos podrían ser **MCAR**, lo que se verificará formalmente a continuación.
+
+Antes de aplicar las pruebas, es importante entender qué significa cada mecanismo de datos faltantes. Según Kaur (2025), no todos los datos faltantes son iguales, y comprender su tipo es el primer paso para tratarlos correctamente:
+
+| Mecanismo | Nombre completo | Descripción | Implicación |
+|:----------|:----------------|:------------|:------------|
+| **MCAR** | Missing Completely at Random | Los datos faltan de forma totalmente aleatoria, sin ninguna relación con otras variables ni con el valor faltante en sí. | Es el escenario más favorable. La eliminación de filas no introduce sesgo. |
+| **MAR** | Missing at Random | Los datos faltan de forma relacionada con otras variables **observadas**, pero no con el valor faltante en sí. | No se puede ignorar. Se recomienda imputación considerando las variables relacionadas. |
+| **MNAR** | Missing Not at Random | Los datos faltan por razones relacionadas con el **propio valor faltante**. | Es el escenario más difícil. Requiere modelos especializados para su tratamiento. |
+
+> Kaur, T. (2025). *The impact of missing data on statistical analysis and how to fix it*. Medium. https://medium.com/@tarangds/the-impact-of-missing-data-on-statistical-analysis-and-how-to-fix-it-3498ad084bfe
+
+## Determinación del Tipo de Datos Faltantes
+
+El procedimiento se basó en la metodología implementada por el Centro Magis de la Universidad Javeriana (Centro Magis, 2025), donde la hipótesis nula establece que los datos faltantes se distribuyen de forma completamente aleatoria (MCAR).Para determinar el mecanismo de generación de datos faltantes se utilizaron dos enfoques complementarios: la **prueba de Little (1988)** como test formal, y una **comparación de medias mediante t-test** como análisis exploratorio visual.
+
+### Prueba de Little
+
+Para evaluar formalmente el mecanismo de datos faltantes, se aplicó la prueba de Little mediante `naniar::mcar_test()`. El procedimiento se basó en la metodología implementada por el Centro Magis de la Universidad Javeriana (2025), donde la hipótesis nula establece que los datos faltantes se distribuyen de forma completamente aleatoria (MCAR). Siguiendo este enfoque, se estableció un nivel de significancia estricto de **α = 0.001**.
+
+
+```{r pruebalittle}
+library(naniar)
+
+vars_little <- c("Income", "MntWines", "Age", "MntRegularProds",
+                 "Recency", "Customer_Days", "MntTotal", "MntMeatProducts")
+
+test_little <- mcar_test(df[, vars_little])
+
+data.frame(
+  Estadístico = round(test_little$statistic, 3),
+  GL          = test_little$df,
+  p_valor     = round(test_little$p.value, 4)
+) |>
+  kable(col.names = c("Estadístico chi-cuadrado", "Grados de libertad", "p-valor"),
+        align = c("c", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+### Comparación de Medias
+
+Se comparó la distribución del ingreso (`Income`) entre los registros con y sin datos faltantes en `MntWines`, y viceversa. Si las distribuciones son similares, refuerza la hipótesis MCAR.
+```{r ttest}
+# t-test: Income ~ missing MntWines
+grupo_mntw <- ifelse(is.na(df$MntWines), "Faltante", "Observado")
+t1 <- t.test(Income ~ grupo_mntw, data = df)
+
+# t-test: MntWines ~ missing Income
+grupo_inc <- ifelse(is.na(df$Income), "Faltante", "Observado")
+t2 <- t.test(MntWines ~ grupo_inc, data = df)
+
+data.frame(
+  Comparación  = c("Income según faltantes en MntWines",
+                   "MntWines según faltantes en Income"),
+  Media_obs    = c(round(t1$estimate[2], 1), round(t2$estimate[2], 1)),
+  Media_falt   = c(round(t1$estimate[1], 1), round(t2$estimate[1], 1)),
+  p_valor      = c(round(t1$p.value, 4), round(t2$p.value, 4))
+) |>
+  kable(col.names = c("Comparación", "Media observados", "Media faltantes", "p-valor"),
+        align = c("l", "c", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = TRUE, font_size = 12)
+```
+
+
+Los resultados de ambos enfoques apuntan en direcciones distintas y vale la pena analizarlos con cuidado.
+
+La prueba de Little arrojó un estadístico chi-cuadrado de 113.908 con 28 grados de libertad y un **p-valor de 0**, lo que lleva a **rechazar la hipótesis nula de MCAR**. Esto indica que los datos faltantes no son completamente aleatorios.
+
+La comparación de medias complementa esta conclusión. Para `Income` según faltantes en `MntWines`, la media del grupo con datos faltantes (698.790) es notablemente más alta que la del grupo observado (514.945), con un p-valor de 0.0023, lo que confirma que **los clientes con mayor ingreso tienden a tener faltantes en MntWines**. Esto es una señal clara de **MAR** (Missing at Random): la ausencia del dato en `MntWines` está relacionada con el nivel de ingreso, una variable observada en el dataset. En cambio, para `MntWines` según faltantes en `Income`, el p-valor de 0.2184 indica que no hay diferencia significativa, lo que es consistente con este patrón.
+
+**Figura 4.7.** Distribución del ingreso según presencia de faltantes en MntWines
+```{r shadowplot, fig.height=4, fig.width=8}
+df |>
+  mutate(MntWines_missing = ifelse(is.na(MntWines), "Faltante", "Observado")) |>
+  ggplot(aes(x = Income, fill = MntWines_missing)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Faltante" = "#E15759", "Observado" = "#4E79A7")) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Ingreso", y = "Densidad", fill = "MntWines")
+```
+
+**Figura 4.8.** Distribución de MntWines según presencia de faltantes en Income
+```{r shadowplot2, fig.height=4, fig.width=8}
+df |>
+  mutate(Income_missing = ifelse(is.na(Income), "Faltante", "Observado")) |>
+  filter(!is.na(MntWines)) |>
+  ggplot(aes(x = MntWines, fill = Income_missing)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Faltante" = "#E15759", "Observado" = "#4E79A7")) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Gasto en vinos (últimos 2 años)", 
+       y = "Densidad", 
+       fill = "Income")
+```
+
+Las Figuras 4.7 y 4.8 refuerzan visualmente estas conclusiones: en la Figura 4.7 se observa claramente que la distribución del ingreso de los registros con `MntWines` faltante está desplazada hacia valores más altos, mientras que en la Figura 4.8 las distribuciones de gasto en vinos son prácticamente idénticas independientemente de si `Income` está o no presente.
+
+**Tabla 4.7.** Resumen de mecanismos de datos faltantes por variable
+
+| Variable | N faltantes | Mecanismo | Justificación |
+|:---------|:-----------:|:---------:|:--------------|
+| Income | 68 | MAR | Los clientes con faltantes tienen ingresos significativamente más altos (p = 0.0023), la ausencia depende de variables observadas |
+| MntWines | 20 | MAR | Relacionado con el nivel de ingreso; prueba de Little rechaza MCAR (p ≈ 0) |
+| Age | 1 | — | Faltante producto de corrección de inconsistencia (valor 240), no hay patrón |
+| marital_Divorced | 6 | — | Faltantes producto de corrección de inconsistencia (valor 100), no hay patrón |
+| MntRegularProds | 3 | — | Faltantes producto de corrección de inconsistencia (valor negativo), no hay patrón |
+
+Las variables `Age`, `marital_Divorced` y `MntRegularProds` no tienen mecanismo asignable porque sus faltantes son artificiales — los generamos nosotros al corregir inconsistencias
+
+En conclusión, el mecanismo de datos faltantes corresponde a **MAR**, lo que implica que la imputación debe tener en cuenta las variables relacionadas con la ausencia, particularmente `Income`.
+
+## Imputación de Datos Faltantes
+
+La estrategia de imputación se definió según la distribución de cada variable, usando los indicadores de sesgo calculados en la Tabla 4.4:
+
+- **Promedio**: para variables con distribución simétrica (sesgo ≈ 0).
+- **Mediana**: para variables con distribución sesgada o presencia de valores atípicos.
+- **Moda**: para variables binarias o categóricas.
+
+### Imputación de `Income`
+
+`Income` presentó un sesgo de **0.01** y curtosis de **-0.83**, lo que indica una distribución prácticamente simétrica. Por esta razón se imputó con el **promedio**.
+
+**Figura 4.9.** Densidad de `Income` antes de la imputación
+```{r densityincome, fig.height=4, fig.width=8}
+df_before_imp <- read_excel("segmentation-customers.xlsx", sheet = "data")
+df_before_imp <- df_before_imp[!duplicated(df_before_imp), ]
+
+df_before_imp |>
+  filter(!is.na(Income)) |>
+  ggplot(aes(x = Income)) +
+  geom_density(fill = "#4E79A7", alpha = 0.6) +
+  geom_vline(aes(xintercept = mean(Income, na.rm = TRUE)),
+             color = "red", linetype = "dashed", linewidth = 0.8) +
+  geom_vline(aes(xintercept = median(Income, na.rm = TRUE)),
+             color = "darkgreen", linetype = "dashed", linewidth = 0.8) +
+  annotate("text", x = mean(df_before_imp$Income, na.rm=TRUE),
+           y = 0, label = "Media", color = "red", hjust = -0.1, size = 3.5) +
+  annotate("text", x = median(df_before_imp$Income, na.rm=TRUE),
+           y = 0.0000005, label = "Mediana", color = "darkgreen", hjust = 1.1, size = 3.5) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Ingreso anual", y = "Densidad") +
+  scale_x_continuous(labels = scales::comma)
+```
+
+La Figura 4.9 confirma que la distribución de `Income` es simétrica, con media y mediana muy cercanas entre sí, lo que respalda el uso del **promedio** como valor de imputación.
+
+```{r imputacionincome}
+media_income <- round(mean(df_before_imp$Income, na.rm = TRUE), 1)
+df$Income[is.na(df$Income)] <- media_income
+cat("Promedio imputado en Income:", media_income, "\n")
+```
+
+**Figura 4.10.** Densidad de `Income` antes y después de la imputación
+```{r plotincome, fig.height=4, fig.width=8}
+bind_rows(
+  data.frame(Income = df_before_imp$Income, Estado = "Antes"),
+  data.frame(Income = df$Income,            Estado = "Después")
+) |>
+  filter(!is.na(Income)) |>
+  ggplot(aes(x = Income, fill = Estado)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Antes" = "#E15759", "Después" = "#4E79A7")) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Ingreso anual", y = "Densidad", fill = NULL) +
+  scale_x_continuous(labels = scales::comma)
+```
+
+La Figura 4.10 muestra que tras la imputación aparece un pico pronunciado en el valor del promedio (~516,809), efecto esperado cuando se imputa un valor constante para todos los registros faltantes. Este comportamiento es una limitación conocida de la imputación por promedio: reduce artificialmente la variabilidad de la variable. Sin embargo, dado que los 68 faltantes representan apenas el **3.3%** del total de registros y la distribución es simétrica, el impacto sobre el análisis posterior es marginal.
+
+---
+
+### Imputación de `MntWines`
+
+`MntWines` presentó un sesgo de **1.18**, indicando una distribución asimétrica hacia la derecha con presencia de valores atípicos. Por esta razón se imputó con la **mediana**.
+
+**Figura 4.11.** Densidad de `MntWines` antes de la imputación
+```{r densitywines, fig.height=4, fig.width=8}
+df_before_imp |>
+  filter(!is.na(MntWines)) |>
+  ggplot(aes(x = MntWines)) +
+  geom_density(fill = "#E15759", alpha = 0.6) +
+  geom_vline(aes(xintercept = mean(MntWines, na.rm = TRUE)),
+             color = "red", linetype = "dashed", linewidth = 0.8) +
+  geom_vline(aes(xintercept = median(MntWines, na.rm = TRUE)),
+             color = "darkgreen", linetype = "dashed", linewidth = 0.8) +
+  annotate("text", x = mean(df_before_imp$MntWines, na.rm=TRUE),
+           y = 0, label = "Media", color = "red", hjust = -0.1, size = 3.5) +
+  annotate("text", x = median(df_before_imp$MntWines, na.rm=TRUE),
+           y = 0, label = "Mediana", color = "darkgreen", hjust = 1.1, size = 3.5) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Gasto en vinos (últimos 2 años)", y = "Densidad")
+```
+
+La Figura 4.11 muestra claramente el sesgo a la derecha, donde la media es notablemente mayor que la mediana, lo que confirma que imputar con la media introduciría un sesgo adicional.
+```{r imputacionwines}
+mediana_wines <- median(df_before_imp$MntWines, na.rm = TRUE)
+df$MntWines[is.na(df$MntWines)] <- mediana_wines
+cat("Mediana imputada en MntWines:", mediana_wines, "\n")
+```
+
+**Figura 4.12.** Densidad de `MntWines` antes y después de la imputación
+```{r plotwines, fig.height=4, fig.width=8}
+bind_rows(
+  data.frame(MntWines = df_before_imp$MntWines, Estado = "Antes"),
+  data.frame(MntWines = df$MntWines,             Estado = "Después")
+) |>
+  filter(!is.na(MntWines)) |>
+  ggplot(aes(x = MntWines, fill = Estado)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Antes" = "#E15759", "Después" = "#4E79A7")) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Gasto en vinos (últimos 2 años)", y = "Densidad", fill = NULL)
+```
+
+
+### Imputación de `Age`, `MntRegularProds` y `marital_Divorced`
+
+**Figura 4.13.** Densidad de `Age` antes y después de la imputación
+```{r plotage, fig.height=4, fig.width=8}
+mediana_age <- median(df_before_imp$Age[df_before_imp$Age <= 100], na.rm = TRUE)
+
+df_age_before <- df_before_imp$Age[df_before_imp$Age <= 100 & !is.na(df_before_imp$Age)]
+df_age_after  <- c(df_age_before, rep(mediana_age, sum(is.na(df_before_imp$Age))))
+
+bind_rows(
+  data.frame(Age = df_age_before, Estado = "Sin imputar"),
+  data.frame(Age = df_age_after,  Estado = "Con imputar")
+) |>
+  ggplot(aes(x = Age, fill = Estado)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Sin imputar" = "#E15759", "Con imputar" = "#4E79A7")) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Edad (años)", y = "Densidad", fill = "Estado")
+```
+
+Dado que `Age` solo tiene **1 faltante** producto de la corrección del valor 240, la imputación por mediana no altera visiblemente la distribución, como se confirma en la Figura 4.13.
+
+**Figura 4.14.** Distribución de `MntRegularProds` antes y después de la imputación
+```{r plotregularprods, fig.height=4, fig.width=8}
+mediana_reg <- median(df_before_imp$MntRegularProds[df_before_imp$MntRegularProds >= 0], 
+                      na.rm = TRUE)
+
+reg_before <- df_before_imp$MntRegularProds[df_before_imp$MntRegularProds >= 0 & 
+                                             !is.na(df_before_imp$MntRegularProds)]
+reg_after  <- c(reg_before, rep(mediana_reg, sum(is.na(df_before_imp$MntRegularProds)) + 
+                                              sum(df_before_imp$MntRegularProds < 0, na.rm=TRUE)))
+
+bind_rows(
+  data.frame(MntRegularProds = reg_before, Estado = "Sin imputar"),
+  data.frame(MntRegularProds = reg_after,  Estado = "Con imputar")
+) |>
+  ggplot(aes(x = MntRegularProds, fill = Estado)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Sin imputar" = "#E15759", "Con imputar" = "#4E79A7")) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Gasto en productos regulares (últimos 2 años)", y = "Densidad", fill = "Estado")
+```
+
+La Figura 4.14 confirma que la distribución de `MntRegularProds` se mantiene prácticamente idéntica antes y después de la imputación, dado que solo 3 registros fueron imputados con la mediana.
+
+
+**Figura 4.15.** Distribución de `marital_Divorced` antes y después de la imputación
+```{r plotmarital, fig.height=3.5, fig.width=8}
+moda_div <- as.numeric(names(sort(table(
+  df_before_imp$marital_Divorced[df_before_imp$marital_Divorced %in% c(0,1)]),
+  decreasing = TRUE)[1]))
+
+div_before <- df_before_imp$marital_Divorced[df_before_imp$marital_Divorced %in% c(0,1)]
+div_after  <- ifelse(is.na(df_before_imp$marital_Divorced) | 
+                     !df_before_imp$marital_Divorced %in% c(0,1),
+                     moda_div, df_before_imp$marital_Divorced)
+
+bind_rows(
+  data.frame(Valor = factor(div_before), Estado = "Sin imputar"),
+  data.frame(Valor = factor(div_after),  Estado = "Con imputar")
+) |>
+  count(Estado, Valor) |>
+  group_by(Estado) |>
+  mutate(Pct = round(n / sum(n) * 100, 1)) |>
+  ggplot(aes(x = Valor, y = Pct, fill = Estado)) +
+  geom_col(position = "dodge", alpha = 0.85) +
+  geom_text(aes(label = paste0(Pct, "%")),
+            position = position_dodge(width = 0.9),
+            vjust = -0.3, size = 3.5) +
+  scale_fill_manual(values = c("Sin imputar" = "#E15759", "Con imputar" = "#4E79A7")) +
+  scale_x_discrete(labels = c("0" = "No divorciado", "1" = "Divorciado")) +
+  theme_minimal(base_size = 12) +
+  labs(x = NULL, y = "Porcentaje (%)", fill = "Estado") +
+  ylim(0, 100)
+```
+
+La Figura 4.15 confirma que la distribución de `marital_Divorced` se mantiene prácticamente igual antes y después de imputar, dado que los 6 faltantes representan menos del 0.3% del total y se imputaron con la categoría mayoritaria (0 = no divorciado).
+```{r imputacionresto}
+# Apply imputations to df
+df$Age[is.na(df$Age)] <- mediana_age
+
+df$MntRegularProds[is.na(df$MntRegularProds)] <- median(
+  df_before_imp$MntRegularProds, na.rm = TRUE)
+
+df$marital_Divorced[is.na(df$marital_Divorced)] <- moda_div
+
+cat("NAs restantes:", sum(sapply(df, function(x) sum(is.na(x)))), "\n")
+```
+
+
+**Tabla 4.9.** Resumen de estrategias de imputación aplicadas
+
+| Variable | N faltantes | Distribución | Método | Valor imputado |
+|:---------|:-----------:|:------------:|:------:|:---------------|
+| Income | 68 | Simétrica (sesgo = 0.01) | Promedio | `r format(media_income, big.mark=",")` |
+| MntWines | 20 | Sesgada (sesgo = 1.18) | Mediana | `r mediana_wines` |
+| Age | 1 | Ligeramente sesgada | Mediana | `r median(df_before_imp$Age, na.rm=TRUE)` |
+| MntRegularProds | 3 | Sesgada | Mediana | `r median(df_before_imp$MntRegularProds, na.rm=TRUE)` |
+| marital_Divorced | 6 | Binaria | Moda | `r moda_div` |
+
+
+# Resultados y Discusión
+
+El presente análisis tiene como objetivo caracterizar los perfiles de clientes de la campaña piloto a partir de los datos procesados. Se examinan las características sociodemográficas —edad, nivel educativo, estado civil e ingresos—, el comportamiento de compra por categoría de producto y canal, y la relación entre estas variables y la respuesta a la campaña, en función de los tres objetivos específicos planteados.
+```{r paleta}
+# Paleta institucional unificada para todo el informe
+pal_cat  <- c("#2C6E91", "#4AABB8", "#8DC5CC", "#B8D9E0", "#D6EEF2")
+col_acep <- "#2C6E91"
+col_rech <- "#C0392B"
+col_bar  <- "#2C6E91"
+```
+
+## Análisis Descriptivo Post-Procesamiento
+
+Tras completar el proceso de depuración, tratamiento de inconsistencias e imputación, el dataset quedó con **`r nrow(df)` registros** y **`r ncol(df)` variables**, sin datos faltantes.
+
+### Variables Sociodemográficas
+
+**Figura 5.1.** Distribución de la edad de los clientes
+```{r histedad, fig.height=4, fig.width=7}
+ggplot(df, aes(x = Age)) +
+  geom_histogram(binwidth = 5, fill = col_bar, color = "white", alpha = 0.9) +
+  geom_vline(xintercept = median(df$Age), color = "#C0392B",
+             linetype = "dashed", linewidth = 0.8) +
+  annotate("text", x = median(df$Age) + 1, y = 310,
+           label = paste0("Mediana: ", median(df$Age), " años"),
+           color = "#C0392B", hjust = 0, size = 3.5) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank()) +
+  labs(x = "Edad (años)", y = "Frecuencia")
+```
+
+**Tabla 5.1.** Indicadores descriptivos de la edad
+```{r tablaedad}
+data.frame(
+  Indicador = c("Media", "Mediana", "Desv. estándar", "Mínimo", "Máximo", "Q1", "Q3"),
+  Valor = c(round(mean(df$Age), 1), median(df$Age), round(sd(df$Age), 1),
+            min(df$Age), max(df$Age),
+            quantile(df$Age, 0.25), quantile(df$Age, 0.75))
+) |>
+  kable(col.names = c("Indicador", "Valor"), align = c("l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                full_width = FALSE, font_size = 12)
+```
+
+La mayoría de los clientes se concentra entre los 40 y 60 años, con una mediana de **`r median(df$Age)` años** y una desviación estándar de **`r round(sd(df$Age),1)` años** (Tabla 5.1). La distribución muestra un pico principal alrededor de los 45 años y una cola hacia edades mayores, lo que sugiere que la base de clientes es predominantemente de mediana edad.
+
+---
+
+**Figura 5.2.** Distribución del ingreso anual
+```{r histincome, fig.height=4, fig.width=7}
+ggplot(df, aes(x = Income)) +
+  geom_histogram(bins = 40, fill = col_bar, color = "white", alpha = 0.9) +
+  geom_vline(xintercept = median(df$Income), color = "#C0392B",
+             linetype = "dashed", linewidth = 0.8) +
+  annotate("text", x = median(df$Income) + 5000, y = 140,
+           label = paste0("Mediana: ", format(round(median(df$Income)), big.mark=",")),
+           color = "#C0392B", hjust = 0, size = 3.5) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank()) +
+  labs(x = "Ingreso anual", y = "Frecuencia") +
+  scale_x_continuous(labels = scales::comma)
+```
+
+**Tabla 5.2.** Indicadores descriptivos del ingreso anual
+```{r tablaincome}
+data.frame(
+  Indicador = c("Media", "Mediana", "Desv. estándar", "Mínimo", "Máximo", "Q1", "Q3"),
+  Valor = format(round(c(mean(df$Income), median(df$Income), sd(df$Income),
+                         min(df$Income), max(df$Income),
+                         quantile(df$Income, 0.25), quantile(df$Income, 0.75))),
+                 big.mark = ",")
+) |>
+  kable(col.names = c("Indicador", "Valor"), align = c("l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                full_width = FALSE, font_size = 12)
+```
+
+El ingreso anual presenta una distribución aproximadamente simétrica (Figura 5.2), con mediana de **`r format(round(median(df$Income)), big.mark=",")`** y la mayoría de los clientes entre 300,000 y 700,000 (Tabla 5.2). El rango intercuartílico confirma que el 50% central de los clientes se concentra en un rango amplio pero sin valores extremos dominantes.
+
+---
+
+**Figura 5.3.** Nivel educativo de los clientes
+```{r bareduc, fig.height=4, fig.width=7}
+educ_df <- data.frame(
+  Nivel = c("2° Ciclo", "Básica", "Licenciatura", "Maestría", "Doctorado"),
+  N = c(sum(df$`education_2n Cycle`), sum(df$education_Basic),
+        sum(df$education_Graduation), sum(df$education_Master),
+        sum(df$education_PhD))
+) |> mutate(Pct = round(N / sum(N) * 100, 1))
+
+ggplot(educ_df, aes(x = reorder(Nivel, N), y = N)) +
+  geom_col(fill = col_bar, alpha = 0.9) +
+  geom_text(aes(label = paste0(N, " (", Pct, "%)")),
+            hjust = -0.08, size = 3.5, color = "gray30") +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank()) +
+  labs(x = NULL, y = "Número de clientes") +
+  ylim(0, max(educ_df$N) * 1.28)
+```
+
+**Tabla 5.3.** Distribución por nivel educativo
+```{r tablaeduc}
+educ_df |>
+  arrange(desc(N)) |>
+  kable(col.names = c("Nivel educativo", "N", "Porcentaje (%)"),
+        align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                full_width = FALSE, font_size = 12)
+```
+
+El **`r educ_df$Pct[educ_df$Nivel=="Licenciatura"]`%** de los clientes tiene licenciatura, siendo el nivel más frecuente. Junto con doctorado (**`r educ_df$Pct[educ_df$Nivel=="Doctorado"]`%**) y maestría (**`r educ_df$Pct[educ_df$Nivel=="Maestría"]`%**), más del 88% de los clientes cuenta con formación universitaria o superior (Tabla 5.3).
+
+---
+
+**Figura 5.4.** Estado civil de los clientes
+```{r barcivil, fig.height=4, fig.width=7}
+civil_df <- data.frame(
+  Estado = c("Divorciado", "Casado", "Soltero", "En pareja", "Viudo"),
+  N = c(sum(df$marital_Divorced == 1, na.rm=TRUE), sum(df$marital_Married),
+        sum(df$marital_Single), sum(df$marital_Together), sum(df$marital_Widow))
+) |> mutate(Pct = round(N / sum(N) * 100, 1))
+
+ggplot(civil_df, aes(x = reorder(Estado, N), y = N)) +
+  geom_col(fill = col_bar, alpha = 0.9) +
+  geom_text(aes(label = paste0(N, " (", Pct, "%)")),
+            hjust = -0.08, size = 3.5, color = "gray30") +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank()) +
+  labs(x = NULL, y = "Número de clientes") +
+  ylim(0, max(civil_df$N) * 1.28)
+```
+
+**Tabla 5.4.** Distribución por estado civil
+```{r tablacivil}
+civil_df |>
+  arrange(desc(N)) |>
+  kable(col.names = c("Estado civil", "N", "Porcentaje (%)"),
+        align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                full_width = FALSE, font_size = 12)
+```
+
+Los clientes casados representan el grupo más numeroso (**`r civil_df$Pct[civil_df$Estado=="Casado"]`%**), seguidos por quienes tienen pareja (**`r civil_df$Pct[civil_df$Estado=="En pareja"]`%**) y solteros (**`r civil_df$Pct[civil_df$Estado=="Soltero"]`%**). En conjunto, el 64% de los clientes vive en pareja o está casado.
+
+---
+
+### Variables de Comportamiento de Compra
+
+**Figura 5.5.** Gasto promedio por categoría de producto
+```{r bargasto, fig.height=4, fig.width=8}
+gasto_df <- data.frame(
+  Categoria = c("Vinos", "Carnes", "Oro", "Pescado", "Dulces", "Frutas"),
+  Gasto = c(mean(df$MntWines), mean(df$MntMeatProducts), mean(df$MntGoldProds),
+            mean(df$MntFishProducts), mean(df$MntSweetProducts), mean(df$MntFruits))
+) |> mutate(Gasto = round(Gasto, 1))
+
+ggplot(gasto_df, aes(x = reorder(Categoria, Gasto), y = Gasto)) +
+  geom_col(fill = col_bar, alpha = 0.9) +
+  geom_text(aes(label = Gasto), hjust = -0.1, size = 3.5, color = "gray30") +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank()) +
+  labs(x = NULL, y = "Gasto promedio (últimos 2 años)") +
+  ylim(0, max(gasto_df$Gasto) * 1.18)
+```
+
+**Tabla 5.5.** Gasto promedio y mediana por categoría de producto
+```{r tablagasto}
+data.frame(
+  Categoria = c("Vinos", "Carnes", "Oro", "Pescado", "Dulces", "Frutas"),
+  Media = round(c(mean(df$MntWines), mean(df$MntMeatProducts), mean(df$MntGoldProds),
+                  mean(df$MntFishProducts), mean(df$MntSweetProducts), mean(df$MntFruits)), 1),
+  Mediana = c(median(df$MntWines), median(df$MntMeatProducts), median(df$MntGoldProds),
+              median(df$MntFishProducts), median(df$MntSweetProducts), median(df$MntFruits)),
+  SD = round(c(sd(df$MntWines), sd(df$MntMeatProducts), sd(df$MntGoldProds),
+               sd(df$MntFishProducts), sd(df$MntSweetProducts), sd(df$MntFruits)), 1)
+) |>
+  arrange(desc(Media)) |>
+  kable(col.names = c("Categoría", "Media", "Mediana", "Desv. estándar"),
+        align = c("l", "c", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                full_width = FALSE, font_size = 12)
+```
+
+Los vinos lideran el gasto con una media de **`r gasto_df$Gasto[gasto_df$Categoria=="Vinos"]`**, casi el doble que las carnes (**`r gasto_df$Gasto[gasto_df$Categoria=="Carnes"]`**). La Tabla 5.5 revela que la mediana en todas las categorías es notablemente menor que la media, confirmando distribuciones sesgadas donde una minoría de clientes concentra el gasto más alto.
+
+---
+
+**Figura 5.6.** Canal de compra preferido
+```{r barcanal, fig.height=4, fig.width=7}
+canal_df <- data.frame(
+  Canal = c("Tienda física", "Web", "Catálogo", "Descuentos"),
+  Media = c(mean(df$NumStorePurchases), mean(df$NumWebPurchases),
+            mean(df$NumCatalogPurchases), mean(df$NumDealsPurchases))
+) |> mutate(Media = round(Media, 1))
+
+ggplot(canal_df, aes(x = reorder(Canal, Media), y = Media)) +
+  geom_col(fill = col_bar, alpha = 0.9) +
+  geom_text(aes(label = Media), hjust = -0.1, size = 3.5, color = "gray30") +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank()) +
+  labs(x = NULL, y = "Número promedio de compras") +
+  ylim(0, max(canal_df$Media) * 1.2)
+```
+
+La tienda física es el canal predominante con **`r canal_df$Media[canal_df$Canal=="Tienda física"]`** compras promedio, seguido por la web con **`r canal_df$Media[canal_df$Canal=="Web"]`**. Esto sugiere que, aunque el canal digital tiene presencia relevante, la experiencia presencial sigue siendo preferida.
+
+---
+
+### Análisis Bivariado: Respuesta a la Campaña
+
+**Figura 5.7.** Ingreso y gasto total según respuesta a la campaña
+```{r boxresp, fig.height=4, fig.width=9}
+p1 <- df |>
+  mutate(Respuesta = ifelse(Response == 1, "Aceptó", "Rechazó")) |>
+  ggplot(aes(x = Respuesta, y = Income, fill = Respuesta)) +
+  geom_boxplot(alpha = 0.8, outlier.size = 0.8, outlier.alpha = 0.5) +
+  scale_fill_manual(values = c("Aceptó" = col_acep, "Rechazó" = col_rech)) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none", panel.grid.minor = element_blank()) +
+  labs(x = NULL, y = "Ingreso anual") +
+  scale_y_continuous(labels = scales::comma)
+
+p2 <- df |>
+  mutate(Respuesta = ifelse(Response == 1, "Aceptó", "Rechazó")) |>
+  ggplot(aes(x = Respuesta, y = MntTotal, fill = Respuesta)) +
+  geom_boxplot(alpha = 0.8, outlier.size = 0.8, outlier.alpha = 0.5) +
+  scale_fill_manual(values = c("Aceptó" = col_acep, "Rechazó" = col_rech)) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none", panel.grid.minor = element_blank()) +
+  labs(x = NULL, y = "Gasto total (últimos 2 años)")
+
+library(patchwork)
+p1 + p2
+```
+
+**Tabla 5.6.** Ingreso y gasto total según respuesta a la campaña
+```{r tablabivariada}
+df |>
+  mutate(Respuesta = ifelse(Response == 1, "Aceptó", "Rechazó")) |>
+  group_by(Respuesta) |>
+  summarise(
+    N = n(),
+    `Media Income` = format(round(mean(Income)), big.mark=","),
+    `Mediana Income` = format(round(median(Income)), big.mark=","),
+    `Media Gasto Total` = round(mean(MntTotal), 1),
+    `Mediana Gasto Total` = round(median(MntTotal), 1)
+  ) |>
+  kable(align = c("l","c","c","c","c","c")) |>
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                full_width = FALSE, font_size = 12)
+```
+
+**Figura 5.8.** Tasa de aceptación según nivel educativo
+```{r bareduresp, fig.height=4, fig.width=8}
+educ_resp <- data.frame(
+  Nivel = c("2° Ciclo", "Básica", "Licenciatura", "Maestría", "Doctorado"),
+  Tasa = c(
+    mean(df$Response[df$`education_2n Cycle` == 1]),
+    mean(df$Response[df$education_Basic == 1]),
+    mean(df$Response[df$education_Graduation == 1]),
+    mean(df$Response[df$education_Master == 1]),
+    mean(df$Response[df$education_PhD == 1])
+  )
+) |> mutate(Tasa_pct = round(Tasa * 100, 1))
+
+ggplot(educ_resp, aes(x = reorder(Nivel, Tasa_pct), y = Tasa_pct)) +
+  geom_col(fill = col_acep, alpha = 0.9) +
+  geom_text(aes(label = paste0(Tasa_pct, "%")),
+            hjust = -0.1, size = 3.5, color = "gray30") +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank()) +
+  labs(x = NULL, y = "Tasa de aceptación (%)") +
+  ylim(0, max(educ_resp$Tasa_pct) * 1.2)
+```
+
+**Figura 5.9.** Relación entre ingreso y gasto total según respuesta
+```{r scatterresp, fig.height=5, fig.width=8}
+df |>
+  mutate(Respuesta = ifelse(Response == 1, "Aceptó", "Rechazó")) |>
+  ggplot(aes(x = Income, y = MntTotal, color = Respuesta)) +
+  geom_point(alpha = 0.35, size = 1) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+  scale_color_manual(values = c("Aceptó" = col_acep, "Rechazó" = col_rech)) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank()) +
+  labs(x = "Ingreso anual", y = "Gasto total", color = NULL) +
+  scale_x_continuous(labels = scales::comma)
+```
+
+La Tabla 5.6 muestra que los clientes que aceptaron la campaña tienen una mediana de ingreso **`r round((median(df$Income[df$Response==1]) - median(df$Income[df$Response==0])) / median(df$Income[df$Response==0]) * 100, 1)`%** mayor y un gasto total mediano **`r round((median(df$MntTotal[df$Response==1]) - median(df$MntTotal[df$Response==0])) / median(df$MntTotal[df$Response==0]) * 100, 1)`%** superior al de quienes rechazaron. La Figura 5.9 confirma que la relación entre ingreso y gasto es más pronunciada en el grupo que aceptó. En cuanto al nivel educativo (Figura 5.8), los clientes con doctorado registran la tasa de aceptación más alta (**`r educ_resp$Tasa_pct[educ_resp$Nivel=="Doctorado"]`%**), casi el doble que los de educación básica (**`r educ_resp$Tasa_pct[educ_resp$Nivel=="Básica"]`%**).
+
+
+# Conclusiones
+
+- El dataset final quedó con **2,041 registros** tras eliminar 179 duplicados (8.06%), corregir inconsistencias en tres variables e imputar faltantes en cinco, garantizando una base de datos limpia y completa para el análisis.
+
+- El **50.1%** de los clientes tiene licenciatura y el **64%** está casado o en pareja, con una edad mediana de **50 años** e ingresos anuales medianos de **516,809**. El perfil típico es el de un cliente de mediana edad, con formación universitaria y hogar constituido.
+
+- Los vinos (**300.3**) y las carnes (**166**) concentran el mayor gasto promedio por categoría, con medianas notablemente inferiores a sus medias, lo que indica que una minoría de clientes de alto gasto eleva el promedio general.
+
+- La tienda física es el canal de compra dominante (**5.8 compras promedio**), seguida por la web (**4.1**), lo que sugiere que el cliente aún prefiere la experiencia presencial aunque el canal digital tiene presencia relevante.
+
+- Los clientes que aceptaron la campaña presentan una mediana de ingreso **`r round((median(df$Income[df$Response==1]) - median(df$Income[df$Response==0])) / median(df$Income[df$Response==0]) * 100, 1)`%** mayor y un gasto total mediano **`r round((median(df$MntTotal[df$Response==1]) - median(df$MntTotal[df$Response==0])) / median(df$MntTotal[df$Response==0]) * 100, 1)`%** superior al de quienes rechazaron, lo que indica que el nivel económico es un diferenciador clave.
+
+- El nivel educativo muestra una asociación positiva con la aceptación: los clientes con doctorado registran la tasa más alta (**`r educ_resp$Tasa_pct[educ_resp$Nivel=="Doctorado"]`%**), casi el doble que los de educación básica (**`r educ_resp$Tasa_pct[educ_resp$Nivel=="Básica"]`%**).
+
+- Los hallazgos sugieren orientar la sexta campaña hacia clientes con ingresos altos, formación universitaria o superior y alto gasto histórico en vinos y carnes, por ser el segmento con mayor propensión de aceptación.
+
+
+
+# Referencias
+
+Centro Magis, Universidad Javeriana. (2025a). *Informe estadístico de un caso de estudio*. https://centro-magis.github.io/actividad1MET--V2/
+
+Centro Magis, Universidad Javeriana. (2025b). *Informe descriptivo* [Material del curso Métodos y Simulación Estadística]. https://centro-magis.github.io/actividad1MET--V2/
+
+Centromagis. (2025). *metodosySIM3_V2* [Repositorio de datos]. GitHub. https://github.com/Centromagis/metodosySIM3_V2
+
+Ismay, C., & Kim, A. Y. (2019). *Statistical inference via data science: A ModernDive into R and the tidyverse*. Chapman and Hall/CRC. https://doi.org/10.1201/9780367409913
+
+Kaur, T. (2025). *The impact of missing data on statistical analysis and how to fix it*. Medium. https://medium.com/@tarangds/the-impact-of-missing-data-on-statistical-analysis-and-how-to-fix-it-3498ad084bfe
+
+Rubin, D. B. (1976). Inference and missing data. *Biometrika*, *63*(3), 581–592. https://doi.org/10.1093/biomet/63.3.581
+
+
+# Anexos
+
+## Anexo A: Código comentado del procesamiento de datos
+
+### A.1 Carga de datos y librerías
+```{r anx-carga, eval=FALSE}
+# Carga de librerías necesarias para el análisis
+library(readxl)      # Lectura de archivos Excel
+library(dplyr)       # Manipulación de datos
+library(knitr)       # Generación de tablas en R Markdown
+library(kableExtra)  # Formato avanzado de tablas
+library(ggplot2)     # Visualización de datos
+library(tidyr)       # Transformación de datos (pivot_longer, etc.)
+library(psych)       # Indicadores descriptivos avanzados (sesgo, curtosis)
+library(naniar)      # Análisis y visualización de datos faltantes
+library(patchwork)   # Combinar múltiples gráficos en uno
+
+# Carga del dataset desde archivo Excel
+df <- read_excel("segmentation-customers.xlsx", sheet = "data")
+
+# Verificar dimensiones: filas x columnas
+dim(df)
+```
+
+### A.2 Identificación y eliminación de duplicados
+```{r anx-duplicados, eval=FALSE}
+# Contar registros duplicados (filas idénticas en todas las variables)
+n_duplicados <- sum(duplicated(df))
+n_total      <- nrow(df)
+
+# Mostrar resumen de duplicados encontrados
+cat("Registros totales:    ", n_total, "\n")
+cat("Registros duplicados: ", n_duplicados, "\n")
+cat("Porcentaje:           ", round(n_duplicados / n_total * 100, 2), "%\n")
+
+# Eliminar duplicados conservando la primera ocurrencia
+df <- df[!duplicated(df), ]
+cat("Registros tras eliminación:", nrow(df), "\n")
+```
+
+### A.3 Corrección de inconsistencias lógicas
+```{r anx-inconsistencias, eval=FALSE}
+# Age: reemplazar valores imposibles (>100 años o <18 años) por NA
+df$Age[df$Age > 100 | df$Age < 18] <- NA
+
+# marital_Divorced: variable binaria, solo acepta 0 o 1
+# Valores distintos (ej. 100) se reemplazan por NA
+df$marital_Divorced[!df$marital_Divorced %in% c(0, 1)] <- NA
+
+# MntRegularProds: el gasto no puede ser negativo
+df$MntRegularProds[df$MntRegularProds < 0] <- NA
+
+# Verificar NAs generados por las correcciones
+data.frame(
+  Variable = c("Age", "marital_Divorced", "MntRegularProds"),
+  NAs_generados = c(
+    sum(is.na(df$Age)),
+    sum(is.na(df$marital_Divorced)),
+    sum(is.na(df$MntRegularProds))
+  )
+)
+```
+
+### A.4 Detección de valores atípicos (método IQR)
+```{r anx-atipicos, eval=FALSE}
+# Variables numéricas a analizar
+vars_num <- c("Income", "Age", "Recency", "Customer_Days",
+              "MntWines", "MntFruits", "MntMeatProducts", "MntFishProducts",
+              "MntSweetProducts", "MntGoldProds", "MntTotal", "MntRegularProds",
+              "NumDealsPurchases", "NumWebPurchases", "NumCatalogPurchases",
+              "NumStorePurchases", "NumWebVisitsMonth")
+
+# Función para contar atípicos usando el método IQR
+# Un valor es atípico si cae fuera de [Q1 - 1.5*IQR, Q3 + 1.5*IQR]
+detect_outliers <- function(x) {
+  x   <- na.omit(x)
+  q1  <- quantile(x, 0.25)
+  q3  <- quantile(x, 0.75)
+  iqr <- q3 - q1
+  li  <- q1 - 1.5 * iqr   # Límite inferior
+  ls  <- q3 + 1.5 * iqr   # Límite superior
+  sum(x < li | x > ls)    # Contar valores fuera de los límites
+}
+
+# Tabla resumen de atípicos por variable
+outlier_summary <- data.frame(
+  Variable     = vars_num,
+  N_atipicos   = sapply(vars_num, function(v) detect_outliers(df[[v]])),
+  Pct_atipicos = sapply(vars_num, function(v)
+                   round(detect_outliers(df[[v]]) / sum(!is.na(df[[v]])) * 100, 2))
+)
+
+# Decisión: se conservan los atípicos porque reflejan
+# comportamiento real de consumo, no errores de captura
+```
+
+### A.5 Análisis de datos faltantes
+```{r anx-faltantes, eval=FALSE}
+# Calcular número y porcentaje de faltantes por variable
+missing_df <- data.frame(
+  Variable      = names(df),
+  N_faltantes   = sapply(df, function(x) sum(is.na(x))),
+  Pct_faltantes = sapply(df, function(x) 
+                    round(sum(is.na(x)) / nrow(df) * 100, 2))
+) |>
+  filter(N_faltantes > 0) |>   # Solo variables con faltantes
+  arrange(desc(Pct_faltantes))
+
+# Visualización del patrón de coincidencia de faltantes
+# gg_miss_upset muestra qué variables comparten faltantes en las mismas filas
+gg_miss_upset(df, nsets = 5)
+```
+
+### A.6 Determinación del mecanismo de datos faltantes
+```{r anx-mecanismo, eval=FALSE}
+# Prueba de Little (mcar_test): H0 = los datos son MCAR
+# Se aplica sobre un subconjunto de variables cuantitativas
+# para evitar problemas de singularidad con variables binarias correlacionadas
+vars_little <- c("Income", "MntWines", "Age", "MntRegularProds",
+                 "Recency", "Customer_Days", "MntTotal", "MntMeatProducts")
+
+test_little <- mcar_test(df[, vars_little])
+# p-valor = 0 → se rechaza MCAR
+
+# Comparación de medias (t-test) para identificar MAR
+# Test 1: ¿El ingreso difiere entre registros con/sin faltante en MntWines?
+grupo_mntw <- ifelse(is.na(df$MntWines), "Faltante", "Observado")
+t1 <- t.test(Income ~ grupo_mntw, data = df)
+# p = 0.0023 → diferencia significativa → MAR confirmado
+
+# Test 2: ¿El gasto en vinos difiere entre registros con/sin faltante en Income?
+grupo_inc <- ifelse(is.na(df$Income), "Faltante", "Observado")
+t2 <- t.test(MntWines ~ grupo_inc, data = df)
+# p = 0.2184 → sin diferencia → consistente con MAR
+
+# Conclusión: mecanismo MAR
+# La ausencia en MntWines depende de Income (variable observada)
+```
+
+### A.7 Imputación de datos faltantes
+```{r anx-imputacion, eval=FALSE}
+# Cargar dataset original (sin correcciones) para comparaciones
+df_before_imp <- read_excel("segmentation-customers.xlsx", sheet = "data")
+df_before_imp <- df_before_imp[!duplicated(df_before_imp), ]
+
+# --- Income: distribución simétrica (sesgo = 0.01) → imputar con promedio ---
+media_income <- round(mean(df_before_imp$Income, na.rm = TRUE), 1)
+df$Income[is.na(df$Income)] <- media_income
+
+# --- MntWines: distribución sesgada (sesgo = 1.18) → imputar con mediana ---
+mediana_wines <- median(df_before_imp$MntWines, na.rm = TRUE)
+df$MntWines[is.na(df$MntWines)] <- mediana_wines
+
+# --- Age: 1 faltante artificial, distribución sesgada → mediana ---
+# Se excluye el valor 240 (inconsistencia) para calcular la mediana
+mediana_age <- median(df_before_imp$Age[df_before_imp$Age <= 100], na.rm = TRUE)
+df$Age[is.na(df$Age)] <- mediana_age
+
+# --- MntRegularProds: 3 faltantes artificiales, sesgada → mediana ---
+# Se excluyen valores negativos para calcular la mediana
+df$MntRegularProds[is.na(df$MntRegularProds)] <- median(
+  df_before_imp$MntRegularProds[df_before_imp$MntRegularProds >= 0],
+  na.rm = TRUE)
+
+# --- marital_Divorced: variable binaria → moda (valor más frecuente) ---
+moda_div <- as.numeric(names(sort(
+  table(df_before_imp$marital_Divorced[df_before_imp$marital_Divorced %in% c(0,1)]),
+  decreasing = TRUE)[1]))
+df$marital_Divorced[is.na(df$marital_Divorced)] <- moda_div
+
+# Verificar que no quedan NAs
+cat("NAs restantes tras imputación:", sum(sapply(df, function(x) sum(is.na(x)))), "\n")
+```
+
+### A.8 Análisis descriptivo post-procesamiento
+```{r anx-descriptivo, eval=FALSE}
+# Paleta de colores institucional unificada
+col_bar  <- "#2C6E91"   # Azul principal para barras y histogramas
+col_acep <- "#2C6E91"   # Azul para grupo "Aceptó"
+col_rech <- "#C0392B"   # Rojo para grupo "Rechazó"
+
+# --- Distribución de edad ---
+ggplot(df, aes(x = Age)) +
+  geom_histogram(binwidth = 5, fill = col_bar, color = "white", alpha = 0.9) +
+  geom_vline(xintercept = median(df$Age), color = "#C0392B",
+             linetype = "dashed", linewidth = 0.8) +
+  theme_minimal(base_size = 12) +
+  labs(x = "Edad (años)", y = "Frecuencia")
+
+# --- Nivel educativo ---
+educ_df <- data.frame(
+  Nivel = c("2° Ciclo", "Básica", "Licenciatura", "Maestría", "Doctorado"),
+  N = c(sum(df$`education_2n Cycle`), sum(df$education_Basic),
+        sum(df$education_Graduation), sum(df$education_Master),
+        sum(df$education_PhD))
+) |> mutate(Pct = round(N / sum(N) * 100, 1))
+
+# --- Análisis bivariado: ingreso y gasto según respuesta a la campaña ---
+# Boxplot comparativo con patchwork para combinar dos gráficos
+p1 <- df |>
+  mutate(Respuesta = ifelse(Response == 1, "Aceptó", "Rechazó")) |>
+  ggplot(aes(x = Respuesta, y = Income, fill = Respuesta)) +
+  geom_boxplot(alpha = 0.8) +
+  scale_fill_manual(values = c("Aceptó" = col_acep, "Rechazó" = col_rech)) +
+  theme_minimal() + theme(legend.position = "none") +
+  labs(x = NULL, y = "Ingreso anual")
+
+p2 <- df |>
+  mutate(Respuesta = ifelse(Response == 1, "Aceptó", "Rechazó")) |>
+  ggplot(aes(x = Respuesta, y = MntTotal, fill = Respuesta)) +
+  geom_boxplot(alpha = 0.8) +
+  scale_fill_manual(values = c("Aceptó" = col_acep, "Rechazó" = col_rech)) +
+  theme_minimal() + theme(legend.position = "none") +
+  labs(x = NULL, y = "Gasto total")
+
+p1 + p2   # Combinar con patchwork
+```
