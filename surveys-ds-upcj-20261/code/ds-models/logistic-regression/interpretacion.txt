@@ -1,0 +1,24 @@
+Accuracy: 0.76
+El modelo acertó el 76% de los casos. De 75 pacientes en test, clasificó bien 57.
+
+Matriz de confusión — el punto de partida
+[[39  7]
+ [11 18]]
+
+Léela así:
+|  | Predijo Benigno | Predijo Maligno |
+|---|---|---|
+| **Era Benigno** | 39 ✅ Verdaderos Negativos | 7 ❌ Falsos Positivos |
+| **Era Maligno** | 11 ❌ Falsos Negativos | 18 ✅ Verdaderos Positivos |
+
+Los 11 Falsos Negativos son el error más grave en este escenario: tumores malignos que el modelo clasificó como benignos.
+
+Reporte por clase
+Para la clase 0 (benigno) el modelo va bien: precisión 0.78 y recall 0.85. Detecta bien los benignos.
+Para la clase 1 (maligno) es más débil: recall de 0.62 significa que solo detectó el 62% de los tumores malignos reales. En medicina esto es problemático.
+
+F1-Score
+Es el balance entre precisión y recall. La clase maligna tiene 0.67 vs 0.81 de la benigna, lo que confirma que el modelo tiene más dificultad con los casos positivos.
+
+¿Por qué pasa esto?
+Probablemente hay desbalance de clases: hay más benignos (46) que malignos (29) en el test. El modelo aprende más del caso mayoritario y se vuelve menos sensible al minoritario, que suele ser justamente el más importante.
