@@ -1,0 +1,37 @@
+**El patrón que debes ver**
+
+| Arquitectura | Train | Test | Diferencia |
+|---|---|---|---|
+| Pequeña (8) | 0.76 | 0.75 | 0.01 — casi nada |
+| **Mediana (16-8)** | **0.76** | **0.77** | **✅ Test > Train** |
+| Grande (32-16-8) | 0.82 | 0.71 | 0.11 — sobreajuste |
+
+La red mediana logró algo inusual: el test superó al train. Eso indica que la arquitectura es la justa para este problema, sin memorizar ni quedarse corta.
+
+La red grande cayó en overfitting: tiene demasiada capacidad para solo 2 variables y 300 datos. Aprendió ruido.
+
+---
+
+**Las 282 iteraciones**
+El modelo no entrena de una sola vez. Ajusta los pesos 282 veces pasando por todos los datos hasta que los cambios fueron tan pequeños que convergió. Con más datos o más capas, ese número sube considerablemente.
+
+---
+
+**Comparativa general — todos los modelos**
+
+| Modelo | Test Acc | Recall Maligno | Overfitting |
+|---|---|---|---|
+| Regresión Logística | 0.76 | 0.62 | Bajo |
+| Árbol libre | 0.65 | — | ❌ Alto |
+| Árbol podado | 0.71 | 0.76 | Moderado |
+| Random Forest | 0.75 | 0.72 | Bajo |
+| SVM linear | 0.76 | 0.66 | ✅ Ninguno |
+| SVM RBF | 0.76 | 0.76 | ✅ Ninguno |
+| **Red Neuronal** | **0.77** | **0.69** | Bajo |
+
+---
+
+**Intuición clave de redes neuronales**
+
+Más neuronas y capas no siempre es mejor. La arquitectura debe ser proporcional a la complejidad del problema 
+y la cantidad de datos. Con pocos datos, una red grande solo aprende ruido.

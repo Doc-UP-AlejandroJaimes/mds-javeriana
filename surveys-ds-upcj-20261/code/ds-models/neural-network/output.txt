@@ -1,0 +1,18 @@
+=== Red Pequeña  (1 capa,  8 neuronas) ===
+Train: 0.7644 | Test: 0.7467
+=== Red Mediana  (2 capas, 16-8) ===
+Train: 0.7644 | Test: 0.7733
+=== Red Grande   (3 capas, 32-16-8) ===
+Train: 0.8178 | Test: 0.7067
+
+Reporte modelo mediano:
+              precision    recall  f1-score   support
+
+           0       0.81      0.83      0.82        46
+           1       0.71      0.69      0.70        29
+
+    accuracy                           0.77        75
+   macro avg       0.76      0.76      0.76        75
+weighted avg       0.77      0.77      0.77        75
+
+Iteraciones hasta converger: 282
