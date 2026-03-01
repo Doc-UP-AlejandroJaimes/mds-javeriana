@@ -1,0 +1,44 @@
+**El patrón de K**
+
+| K | Train | Test | Situación |
+|---|---|---|---|
+| 1 | 1.00 | 0.72 | ❌ Sobreajuste total |
+| 3 | 0.85 | 0.73 | Sobreajuste moderado |
+| 5 | 0.82 | 0.69 | Peor que K=3 |
+| 7 | 0.80 | 0.72 | Estable |
+| 11 | 0.78 | 0.73 | Mejorando |
+| 15 | 0.79 | 0.76 | Bueno |
+| **21** | **0.76** | **0.80** | ✅ **Mejor resultado** |
+
+K=1 confirma la teoría: con un solo vecino el modelo memoriza cada punto de entrenamiento,
+ train perfecto pero test malo. A medida que K crece, el modelo se vuelve más general 
+ y en este caso **sigue mejorando hasta K=21**. 
+ Eso sugiere que vale la pena probar K más grandes todavía.
+
+---
+
+**Por qué usaste K=7 en el reporte y no K=21**
+Simplemente porque lo fijamos antes de ver los resultados. En la práctica esto se resuelve con **cross-validation**: probar todos los K sistemáticamente y elegir el que mejor generaliza. Nunca se elige K mirando el test directamente, porque eso es trampa.
+
+---
+
+**Comparativa general actualizada**
+
+| Modelo | Test Acc | Recall Maligno | Overfitting |
+|---|---|---|---|
+| Regresión Logística | 0.76 | 0.62 | Bajo |
+| Árbol libre | 0.65 | — | ❌ Alto |
+| Árbol podado | 0.71 | 0.76 | Moderado |
+| Random Forest | 0.75 | 0.72 | Bajo |
+| SVM linear | 0.76 | 0.66 | ✅ Ninguno |
+| SVM RBF | 0.76 | 0.76 | ✅ Ninguno |
+| Red Neuronal | 0.77 | 0.69 | Bajo |
+| **KNN (K=21)** | **0.80** | — | Bajo |
+
+---
+
+**Intuición clave de KNN**
+
+K pequeño = modelo complejo = sobreajuste. K grande = modelo simple = más general. 
+No hay entrenamiento real, todo el costo computacional está en la predicción, 
+porque debe calcular distancias contra todos los datos cada vez.
