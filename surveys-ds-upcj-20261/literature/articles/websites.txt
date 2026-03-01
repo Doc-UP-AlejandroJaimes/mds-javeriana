@@ -1,0 +1,5 @@
+--- UNIT 2 ---
+https://www.epa.gov/caddis/exploratory-data-analysis
+https://datos.gob.es/es/conocimiento/guia-practica-de-introduccion-al-analisis-exploratorio-de-datos-en-R
+--- UNIT 3 ---
+https://iddigitalschool.com/bootcamps/que-son-los-modelos-de-prediccion-en-data-science/
