@@ -1,0 +1,13 @@
+El sobreajuste en acción
+El árbol libre memorizó el 100% del entrenamiento pero solo acertó el 65% en test. Aprendió el ruido de los datos, no el patrón real. A esto se le llama overfitting.
+El árbol podado bajó a 80% en train pero subió a 71% en test. Esa diferencia más pequeña entre train y test indica que generaliza mejor, que es lo que realmente importa.
+
+Regla de oro que debes recordar siempre:
+
+Un modelo con train=100% y test=65% es un modelo roto. Uno con train=80% y test=71% es un modelo útil.
+
+
+Reporte del árbol podado
+Algo interesante pasó respecto a la regresión logística: el recall de la clase maligna subió de 0.62 a 0.76. 
+El árbol detecta mejor los tumores malignos, aunque su precisión bajó a 0.59, es decir, 
+genera más falsas alarmas. Dependiendo del contexto (médico), ese intercambio puede valer la pena.

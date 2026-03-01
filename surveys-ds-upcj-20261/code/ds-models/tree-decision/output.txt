@@ -1,0 +1,18 @@
+ipt.py
+=== Sin limitar (max_depth=None) ===
+Train accuracy: 1.0000
+Test  accuracy: 0.6533
+
+=== Podado (max_depth=4) ===
+Train accuracy: 0.8044
+Test  accuracy: 0.7067
+
+Reporte árbol podado:
+              precision    recall  f1-score   support
+
+           0       0.82      0.67      0.74        46
+           1       0.59      0.76      0.67        29
+
+    accuracy                           0.71        75
+   macro avg       0.71      0.72      0.70        75
+weighted avg       0.73      0.71      0.71        75
