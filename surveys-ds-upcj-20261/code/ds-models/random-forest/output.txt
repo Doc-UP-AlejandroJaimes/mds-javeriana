@@ -1,0 +1,17 @@
+=== Random Forest ===
+Train accuracy: 0.8489
+Test  accuracy: 0.7467
+
+Importancia de variables:
+  edad: 0.2448
+  tamaño: 0.7552
+
+Reporte:
+              precision    recall  f1-score   support
+
+           0       0.81      0.76      0.79        46
+           1       0.66      0.72      0.69        29
+
+    accuracy                           0.75        75
+   macro avg       0.74      0.74      0.74        75
+weighted avg       0.75      0.75      0.75        75

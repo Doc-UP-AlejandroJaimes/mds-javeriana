@@ -1,0 +1,20 @@
+**Comparativa directa**
+
+| Modelo | Train | Test | Recall Maligno |
+|---|---|---|---|
+| Regresión Logística | — | 0.76 | 0.62 |
+| Árbol libre | 1.00 | 0.65 | — |
+| Árbol podado | 0.80 | 0.71 | 0.76 |
+| **Random Forest** | **0.85** | **0.75** | **0.72** |
+
+Random Forest logró el mejor balance: train y test cercanos (sin sobreajuste), y métricas sólidas en ambas clases.
+
+Importancia de variables — dato clave
+El tamaño del tumor (0.75) es mucho más predictivo que la edad (0.24). Esto es información valiosa que los modelos 
+anteriores no te daban tan directamente. En un problema real esto te diría en qué variable 
+enfocarte o recolectar con más precisión.
+
+¿Por qué Random Forest supera al árbol solo?
+Construye 100 árboles distintos, cada uno entrenado con una muestra aleatoria de los datos y variables. 
+La predicción final es la votación de todos. Los errores individuales de cada árbol se cancelan entre sí, 
+reduciendo el overfitting automáticamente. A esto se le llama bagging.
