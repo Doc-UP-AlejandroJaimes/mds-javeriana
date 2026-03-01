@@ -1,0 +1,33 @@
+**SVM**
+
+Ambos kernels llegaron al mismo test accuracy (0.76), pero con una diferencia importante: el kernel RBF mejoró el recall de la clase maligna de 0.66 a 0.76. Encontró una frontera de decisión más curva que captura mejor los casos positivos.
+
+Lo más notable de SVM es que train y test son casi idénticos en ambos kernels. Eso significa que SVM generaliza muy bien y prácticamente no sobreajusta en este problema.
+
+---
+
+**Comparativa final — todos los modelos**
+
+| Modelo | Train | Test | Recall Maligno | Overfitting |
+|---|---|---|---|---|
+| Regresión Logística | — | 0.76 | 0.62 | Bajo |
+| Árbol libre | 1.00 | 0.65 | — | ❌ Alto |
+| Árbol podado | 0.80 | 0.71 | 0.76 | Moderado |
+| Random Forest | 0.85 | 0.75 | 0.72 | Bajo |
+| SVM linear | 0.76 | 0.76 | 0.66 | ✅ Ninguno |
+| **SVM RBF** | **0.77** | **0.76** | **0.76** | ✅ **Ninguno** |
+
+---
+
+**¿Cuál elegirías?**
+
+Depende del objetivo. Si priorizas detectar la mayor cantidad de tumores malignos posibles, el árbol podado y SVM RBF empatan en recall (0.76). Si priorizas el balance general, SVM RBF gana: mejor accuracy, sin overfitting, y buen recall en la clase crítica.
+
+---
+
+**Una intuición por modelo para recordar siempre**
+
+- **Regresión Logística** → rápido, interpretable, buena línea base
+- **Árbol de Decisión** → muy interpretable, propenso a sobreajuste
+- **Random Forest** → robusto, te dice qué variables importan
+- **SVM** → poderoso en márgenes, poco overfitting, caja negra
