@@ -1,4 +1,19 @@
+# R projects
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+
+# Python virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter (por si lo usas)
+.ipynb_checkpoints/
