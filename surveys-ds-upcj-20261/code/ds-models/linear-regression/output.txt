@@ -1,0 +1,70 @@
+============================================================                                                                                           \test.py
+PARTE 1: REGRESIÓN LINEAL SIMPLE
+============================================================
+
+Ecuación aprendida:
+  precio = 53.65 + 1.76 * metros²
+
+Métricas en test:
+  MSE  = 147.08
+  RMSE = 12.13  ← error promedio en miles USD
+  R²   = 0.9810  ← el modelo explica el 98.1% de la varianza
+
+→ Gráfico guardado: parte1_simple.png
+
+============================================================
+PARTE 2: REGRESIÓN LINEAL MÚLTIPLE
+============================================================
+
+Ecuación aprendida:
+  precio = 27.99
+           + (1.53) × metros²
+           + (9.72) × habitaciones
+           + (-0.82) × antigüedad
+
+Métricas en test:
+  RMSE = 11.71
+  R²   = 0.9807  ← 98.1% de varianza explicada
+
+→ Gráfico guardado: parte2_multiple.png
+
+============================================================
+PARTE 3: IMPLEMENTACIÓN MANUAL con OLS (NumPy)
+============================================================
+
+La fórmula analítica de mínimos cuadrados:
+    β = (XᵀX)⁻¹ · Xᵀy
+
+Coeficientes calculados manualmente:
+  β₀ (intercepto) = 53.6488
+  β₁ (metros²)    = 1.7624
+
+Comparación con sklearn:
+  β₀ sklearn = 53.6488
+  β₁ sklearn = 1.7624
+
+✓ Los resultados son idénticos — sklearn usa el mismo método OLS internamente.
+
+============================================================
+PARTE 4: VERIFICACIÓN DE SUPUESTOS
+============================================================
+
+Un modelo de regresión lineal asume:
+  1. LINEALIDAD        → relación lineal entre X e y
+  2. INDEPENDENCIA     → residuos no correlacionados
+  3. HOMOCEDASTICIDAD  → varianza constante de residuos
+  4. NORMALIDAD        → residuos distribuidos normalmente
+
+→ Gráfico guardado: parte3_supuestos.png
+
+============================================================
+¡Implementación completa!
+============================================================
+
+RESUMEN DE CONCEPTOS CLAVE:
+  • β₀ (intercepto) → valor de y cuando todas las X = 0
+  • β₁ (coeficiente) → cuánto cambia y por cada unidad de X
+  • MSE / RMSE       → error promedio del modelo (mismas unidades que y)
+  • R²               → qué % de la variabilidad de y explica el modelo
+                        R²=1 perfecto | R²=0 inútil | R²<0 peor que la media
+  • Residuos         → la "firma" del modelo; analizarlos revela problemas

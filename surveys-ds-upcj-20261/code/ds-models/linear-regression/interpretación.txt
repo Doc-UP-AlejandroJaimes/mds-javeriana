@@ -1,0 +1,14 @@
+Imagen 1 — Parte 1 (izquierda): Datos y línea ajustada
+Ves una nube de puntos azules (datos de entrenamiento) y naranjas (datos de test), con una línea roja atravesándolos. Eso es la ecuación que el modelo aprendió. Lo que debes interpretar es qué tan bien esa línea "resume" la tendencia de los datos. En este caso los puntos están muy pegados a la línea, lo que confirma el R² de 0.98: la relación entre metros cuadrados y precio es casi perfectamente lineal.
+Imagen 1 — Parte 1 (derecha): Gráfico de Residuos
+Un residuo es el error por cada predicción: real − predicho. El eje X es lo que el modelo predijo, el eje Y es cuánto se equivocó. La línea punteada en cero es la referencia ideal. Lo que buscas es que los puntos estén dispersos aleatoriamente arriba y abajo de esa línea, sin ningún patrón. Si ves una curva o un embudo, el modelo tiene problemas. Aquí se ven bien distribuidos, lo que indica que el modelo no tiene sesgos sistemáticos.
+
+Imagen 2 — Parte 2 (izquierda): Real vs. Predicho
+El eje X es el valor real del precio, el eje Y es lo que el modelo predijo. La línea roja punteada representa la predicción perfecta (donde real = predicho exactamente). Entre más cerca estén los puntos de esa diagonal, mejor es el modelo. Aquí los puntos siguen muy bien la diagonal, lo que confirma que el modelo múltiple funciona bien con las tres variables.
+Imagen 2 — Parte 2 (derecha): Importancia de variables
+Las barras muestran cuánto influye cada variable en el precio, pero en escala estandarizada, es decir, comparables entre sí sin importar sus unidades originales. Lo que ves es que los metros cuadrados tienen el mayor impacto, seguido de las habitaciones, y la antigüedad tiene el menor pero en dirección negativa (a más años, menor precio). Esto te permite responder: ¿qué variable importa más para predecir y?
+
+Imagen 3 — Parte 4 (izquierda): Histograma de residuos
+Muestra la distribución de todos los errores del modelo. La línea roja es el cero. Lo que buscas es que la forma sea una campana centrada en cero, es decir, que el modelo se equivoque de forma simétrica, unas veces por arriba y otras por abajo, sin tendencia a sobreestimar o subestimar. Aquí la campana está bien centrada.
+Imagen 3 — Parte 4 (derecha): QQ-Plot
+Este es el gráfico más técnico. Compara los errores reales de tu modelo contra cómo serían si siguieran una distribución normal perfecta. Si los puntos caen sobre la línea roja diagonal, tus residuos son normales. Esto es importante porque la regresión lineal asume normalidad de los errores para que las métricas e intervalos de confianza sean válidos. En tu caso los puntos siguen bien la diagonal, por lo que el supuesto se cumple.
