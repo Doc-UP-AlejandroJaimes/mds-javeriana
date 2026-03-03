@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelos de Minería de Datos — Maestría en Ciencia de Datos</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:        #1a1a2e;
+    --paper:      #f5f3ee;
+    --cream:      #ede9e0;
+    --accent:     #2d5986;
+    --accent2:    #7a9e5f;
+    --accent3:    #c0773a;
+    --accent4:    #8e4f7a;
+    --rule:       #c8c0b0;
+    --muted:      #6b6458;
+    --highlight:  #e8dfc8;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── subtle paper texture ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(0,0,0,.025) 28px, rgba(0,0,0,.025) 29px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+
+  /* ────────────── HEADER ────────────── */
+  header {
+    border-top: 4px solid var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 28px 0 20px;
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: fadeUp .6s ease forwards;
+  }
+
+  .header-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.7rem, 4vw, 2.8rem);
+    font-weight: 900;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+
+  h1 span { color: var(--accent); }
+
+  .header-sub {
+    margin-top: 10px;
+    font-size: .9rem;
+    color: var(--muted);
+    max-width: 640px;
+  }
+
+  /* ────────────── TESIS GRID ────────────── */
+  .tesis-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: fadeUp .6s ease .15s forwards;
+  }
+
+  .tesis-card {
+    border: 1px solid var(--rule);
+    background: var(--cream);
+    padding: 20px 22px;
+    position: relative;
+  }
+
+  .tesis-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 4px; height: 100%;
+  }
+  .tesis-card.sat::before  { background: var(--accent); }
+  .tesis-card.emer::before { background: var(--accent3); }
+
+  .tesis-num {
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .tesis-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin-bottom: 8px;
+  }
+
+  .tesis-desc {
+    font-size: .82rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ────────────── SECTION LABEL ────────────── */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-top: 1px solid var(--rule);
+    padding-top: 10px;
+    margin-bottom: 18px;
+  }
+
+  /* ────────────── MODEL CARDS ────────────── */
+  .models-section {
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: fadeUp .6s ease .3s forwards;
+  }
+
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 16px;
+  }
+
+  .model-card {
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: box-shadow .2s, transform .2s;
+    position: relative;
+  }
+
+  .model-card:hover {
+    box-shadow: 4px 4px 0 var(--ink);
+    transform: translate(-2px, -2px);
+  }
+
+  .model-card .badge-row {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: .62rem;
+    letter-spacing: .06em;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-weight: 500;
+  }
+
+  .badge.sat  { background: #dce8f5; color: var(--accent); }
+  .badge.emer { background: #f7e8d8; color: var(--accent3); }
+  .badge.sup  { background: #e5edd9; color: var(--accent2); }
+  .badge.cla  { background: #ede5f0; color: var(--accent4); }
+
+  .model-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .model-abbr {
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .model-desc {
+    font-size: .82rem;
+    color: #3a3530;
+    line-height: 1.55;
+  }
+
+  .model-result {
+    margin-top: 10px;
+    font-size: .78rem;
+    color: var(--muted);
+    border-top: 1px dashed var(--rule);
+    padding-top: 8px;
+    font-style: italic;
+  }
+
+  /* winner badge */
+  .winner-tag {
+    position: absolute; top: 12px; right: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: .6rem;
+    letter-spacing: .06em;
+    padding: 3px 8px;
+    background: var(--ink);
+    color: var(--paper);
+    text-transform: uppercase;
+  }
+
+  /* ────────────── COMPARISON TABLE ────────────── */
+  .compare-section {
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: fadeUp .6s ease .45s forwards;
+  }
+
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+  }
+
+  .compare-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 500;
+  }
+
+  .compare-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+
+  .compare-table tr:nth-child(even) td { background: var(--highlight); }
+
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+  .dot.sat  { background: var(--accent); }
+  .dot.emer { background: var(--accent3); }
+  .dot.both { background: var(--accent4); }
+
+  /* ────────────── METHODOLOGY ────────────── */
+  .method-section {
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: fadeUp .6s ease .55s forwards;
+  }
+
+  .crisp-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+  }
+
+  .crisp-step {
+    flex: 1;
+    min-width: 110px;
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    border-right: none;
+    padding: 14px 12px;
+    text-align: center;
+    position: relative;
+    transition: background .2s;
+  }
+
+  .crisp-step:last-child { border-right: 1px solid var(--rule); }
+
+  .crisp-step:hover { background: white; }
+
+  .crisp-step::after {
+    content: '›';
+    position: absolute; right: -10px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: var(--muted);
+    z-index: 1;
+    background: transparent;
+  }
+  .crisp-step:last-child::after { display: none; }
+
+  .crisp-num {
+    font-family: 'DM Mono', monospace;
+    font-size: .62rem;
+    color: var(--muted);
+    letter-spacing: .08em;
+    margin-bottom: 5px;
+  }
+
+  .crisp-name {
+    font-family: 'Playfair Display', serif;
+    font-size: .82rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 5px;
+  }
+
+  .crisp-desc {
+    font-size: .7rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ────────────── KEY CONCEPTS ────────────── */
+  .concepts-section {
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: fadeUp .6s ease .65s forwards;
+  }
+
+  .concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .concept-chip {
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    padding: 12px 14px;
+    font-size: .8rem;
+  }
+
+  .concept-chip strong {
+    font-family: 'Playfair Display', serif;
+    display: block;
+    font-size: .88rem;
+    margin-bottom: 3px;
+  }
+
+  .concept-chip span {
+    color: var(--muted);
+    font-size: .77rem;
+    line-height: 1.45;
+  }
+
+  /* ────────────── FOOTER ────────────── */
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp .5s ease .75s forwards;
+  }
+
+  .footer-left {
+    font-size: .75rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .footer-right {
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    letter-spacing: .1em;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  /* ────────────── MODAL / DETAIL ────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(26,26,46,.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    max-width: 520px;
+    width: 100%;
+    padding: 32px;
+    position: relative;
+    animation: scaleIn .2s ease;
+  }
+
+  .modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none;
+    font-size: 1.2rem; cursor: pointer;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .modal h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+  }
+
+  .modal .modal-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    color: var(--muted);
+    letter-spacing: .08em;
+    margin-bottom: 14px;
+  }
+
+  .modal p { font-size: .87rem; line-height: 1.65; color: #2e2a25; margin-bottom: 10px; }
+
+  .modal .pros-cons {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    margin-top: 14px;
+  }
+
+  .modal .pros, .modal .cons {
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    padding: 12px;
+    font-size: .78rem;
+    line-height: 1.55;
+  }
+
+  .modal .pros strong, .modal .cons strong {
+    display: block; font-family: 'DM Mono', monospace;
+    font-size: .65rem; letter-spacing: .08em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .modal .pros strong { color: var(--accent2); }
+  .modal .cons strong { color: var(--accent3); }
+
+  /* ────────────── ANIMATIONS ────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @media (max-width: 640px) {
+    .tesis-row { grid-template-columns: 1fr; }
+    .models-grid { grid-template-columns: 1fr; }
+    .crisp-flow { flex-direction: column; }
+    .crisp-step { border-right: 1px solid var(--rule); border-bottom: none; }
+    .crisp-step:last-child { border-bottom: 1px solid var(--rule); }
+    .crisp-step::after { content: '↓'; right: auto; left: 50%; transform: translateX(-50%); top: auto; bottom: -12px; }
+    footer { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-meta">Maestría en Ciencia de Datos &nbsp;·&nbsp; Unidad 2 — Actividad Infográfica &nbsp;·&nbsp; 2025</div>
+    <h1>Modelos de <span>Minería de Datos</span><br>en Proyectos de Tesis</h1>
+    <p class="header-sub">Análisis comparativo de algoritmos de aprendizaje automático aplicados en dos proyectos de tesis de la Maestría en Ciencia de Datos — Pontificia Universidad Javeriana de Cali.</p>
+  </header>
+
+  <!-- TESIS -->
+  <div class="tesis-row">
+    <div class="tesis-card sat">
+      <div class="tesis-num">Tesis 01 &nbsp;·&nbsp; 2023</div>
+      <div class="tesis-title">Sistema de Alertas Tempranas para la Deserción Estudiantil (SAT)</div>
+      <p class="tesis-desc">Predicción de deserción universitaria en pregrado mediante técnicas de Machine Learning aplicadas sobre datos académicos y socioeconómicos de estudiantes.</p>
+    </div>
+    <div class="tesis-card emer">
+      <div class="tesis-num">Tesis 02 &nbsp;·&nbsp; 2024</div>
+      <div class="tesis-title">Predicción de Desenlaces de Pacientes en Emergencias — Valle del Cauca</div>
+      <p class="tesis-desc">Modelo predictivo para anticipar el destino clínico de pacientes en urgencias (alta, hospitalización, remisión) en hospitales nivel I y II, usando datos de atención inicial.</p>
+    </div>
+  </div>
+
+  <!-- MODELS -->
+  <div class="models-section">
+    <div class="section-label">§ 01 &nbsp;·&nbsp; Modelos utilizados — click para ampliar</div>
+    <div class="models-grid">
+
+      <div class="model-card" onclick="openModal('rl')">
+        <div class="badge-row">
+          <span class="badge sat">SAT</span>
+          <span class="badge emer">Emergencias</span>
+          <span class="badge sup">Supervisado</span>
+          <span class="badge cla">Clasificación</span>
+        </div>
+        <div class="model-name">Regresión Logística</div>
+        <div class="model-abbr">RL / RLM (Multinomial)</div>
+        <p class="model-desc">Modelo estadístico que estima la probabilidad de pertenencia a una clase. La variante multinomial permite predecir más de dos categorías de salida.</p>
+        <p class="model-result">SAT: variable de referencia base · Emergencias: limitaciones en clases minoritarias desbalanceadas.</p>
+      </div>
+
+      <div class="model-card" onclick="openModal('svm')">
+        <div class="badge-row">
+          <span class="badge sat">SAT</span>
+          <span class="badge emer">Emergencias</span>
+          <span class="badge sup">Supervisado</span>
+          <span class="badge cla">Clasificación</span>
+        </div>
+        <div class="model-name">Máquinas de Soporte Vectorial</div>
+        <div class="model-abbr">SVM — Lineal / RBF</div>
+        <p class="model-desc">Algoritmo que separa clases mediante hiperplanos óptimos en el espacio de características. El kernel RBF maneja relaciones no lineales.</p>
+        <p class="model-result">SAT: SVM Lineal Accuracy ≈ bueno · Emergencias: SVM con limitaciones en datos desbalanceados.</p>
+      </div>
+
+      <div class="model-card" onclick="openModal('rf')">
+        <div class="badge-row">
+          <span class="badge sat">SAT</span>
+          <span class="badge sup">Supervisado</span>
+          <span class="badge cla">Clasificación</span>
+        </div>
+        <div class="model-name">Bosques Aleatorios</div>
+        <div class="model-abbr">Random Forest (RF)</div>
+        <p class="model-desc">Conjunto de árboles de decisión entrenados sobre submuestras aleatorias. Combina sus predicciones por votación para reducir sobreajuste y mejorar precisión.</p>
+        <p class="model-result">SAT: uno de los modelos con mejor desempeño. Robusto ante ruido en los datos.</p>
+      </div>
+
+      <div class="model-card" onclick="openModal('nnet')">
+        <div class="badge-row">
+          <span class="badge sat">SAT</span>
+          <span class="badge sup">Supervisado</span>
+          <span class="badge cla">Clasificación</span>
+        </div>
+        <div class="model-name">Redes Neuronales</div>
+        <div class="model-abbr">NNET — Red Neuronal Simple</div>
+        <p class="model-desc">Modelo inspirado en el cerebro humano con capas de nodos interconectados. Aprende representaciones complejas mediante retropropagación del error.</p>
+        <p class="model-result">SAT: evaluado con validación cruzada y matriz de confusión para comparación.</p>
+      </div>
+
+      <div class="model-card" onclick="openModal('xgb')">
+        <div class="winner-tag">Mejor modelo</div>
+        <div class="badge-row">
+          <span class="badge emer">Emergencias</span>
+          <span class="badge sup">Supervisado</span>
+          <span class="badge cla">Clasificación</span>
+        </div>
+        <div class="model-name">Extreme Gradient Boosting</div>
+        <div class="model-abbr">XGBoost + TF-IDF</div>
+        <p class="model-desc">Algoritmo de boosting por gradiente que construye árboles en secuencia, corrigiendo errores residuales. Combinado con TF-IDF para procesar texto clínico.</p>
+        <p class="model-result">Emergencias: mejor rendimiento en clases minoritarias. Superó a RL y SVM con variables textuales incluidas.</p>
+      </div>
+
+      <div class="model-card" onclick="openModal('dt')">
+        <div class="badge-row">
+          <span class="badge sat">SAT</span>
+          <span class="badge sup">Supervisado</span>
+          <span class="badge cla">Clasificación</span>
+        </div>
+        <div class="model-name">Árboles de Decisión</div>
+        <div class="model-abbr">Decision Trees (DT)</div>
+        <p class="model-desc">Modelo jerárquico que divide el espacio de decisiones mediante preguntas binarias sobre las variables. Alta interpretabilidad, base de modelos ensemble.</p>
+        <p class="model-result">Revisado como marco teórico base; componente fundamental de Random Forest y XGBoost.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="compare-section">
+    <div class="section-label">§ 02 &nbsp;·&nbsp; Tabla comparativa de modelos</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Modelo</th>
+          <th>Tesis</th>
+          <th>Tipo</th>
+          <th>Interpretabilidad</th>
+          <th>Fortaleza principal</th>
+          <th>Limitación</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Regresión Logística</strong></td>
+          <td><span class="dot sat"></span>SAT &nbsp;<span class="dot emer"></span>Emerg.</td>
+          <td>Clasificación</td>
+          <td>Alta</td>
+          <td>Interpretable, veloz, probabilidades directas</td>
+          <td>Asume linealidad; pobre en datos desbalanceados</td>
+        </tr>
+        <tr>
+          <td><strong>SVM</strong></td>
+          <td><span class="dot sat"></span>SAT &nbsp;<span class="dot emer"></span>Emerg.</td>
+          <td>Clasificación</td>
+          <td>Media</td>
+          <td>Robusto en dimensiones altas; margen máximo</td>
+          <td>Sensible a datos no normalizados y desbalanceo</td>
+        </tr>
+        <tr>
+          <td><strong>Random Forest</strong></td>
+          <td><span class="dot sat"></span>SAT</td>
+          <td>Ensemble</td>
+          <td>Media</td>
+          <td>Resistente a sobreajuste; importancia de variables</td>
+          <td>Menos interpretable que un único árbol</td>
+        </tr>
+        <tr>
+          <td><strong>Redes Neuronales</strong></td>
+          <td><span class="dot sat"></span>SAT</td>
+          <td>Deep/Shallow</td>
+          <td>Baja</td>
+          <td>Captura relaciones no lineales complejas</td>
+          <td>Requiere muchos datos; caja negra</td>
+        </tr>
+        <tr>
+          <td><strong>XGBoost</strong></td>
+          <td><span class="dot emer"></span>Emerg.</td>
+          <td>Boosting</td>
+          <td>Media (SHAP)</td>
+          <td>Mejor desempeño; maneja texto + variables numéricas</td>
+          <td>Más costoso computacionalmente; hiperparámetros</td>
+        </tr>
+        <tr>
+          <td><strong>Árboles de Decisión</strong></td>
+          <td><span class="dot sat"></span>SAT (base)</td>
+          <td>Clasificación</td>
+          <td>Muy alta</td>
+          <td>Visual, intuitivo, no requiere normalización</td>
+          <td>Propenso a sobreajuste; inestable</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CRISP-DM -->
+  <div class="method-section">
+    <div class="section-label">§ 03 &nbsp;·&nbsp; Metodología CRISP-DM — aplicada en ambas tesis</div>
+    <div class="crisp-flow">
+      <div class="crisp-step">
+        <div class="crisp-num">01</div>
+        <div class="crisp-name">Entendimiento del negocio</div>
+        <div class="crisp-desc">Definición del problema y objetivos institucionales o clínicos</div>
+      </div>
+      <div class="crisp-step">
+        <div class="crisp-num">02</div>
+        <div class="crisp-name">Entendimiento de los datos</div>
+        <div class="crisp-desc">Recolección, exploración y análisis de calidad de los datos</div>
+      </div>
+      <div class="crisp-step">
+        <div class="crisp-num">03</div>
+        <div class="crisp-name">Preparación de datos</div>
+        <div class="crisp-desc">Limpieza, transformación e ingeniería de variables (~80% del tiempo)</div>
+      </div>
+      <div class="crisp-step">
+        <div class="crisp-num">04</div>
+        <div class="crisp-name">Modelamiento</div>
+        <div class="crisp-desc">Selección, entrenamiento y ajuste de algoritmos de ML</div>
+      </div>
+      <div class="crisp-step">
+        <div class="crisp-num">05</div>
+        <div class="crisp-name">Evaluación</div>
+        <div class="crisp-desc">Accuracy, Kappa, F1-score, AUC-ROC, matrices de confusión</div>
+      </div>
+      <div class="crisp-step">
+        <div class="crisp-num">06</div>
+        <div class="crisp-name">Despliegue</div>
+        <div class="crisp-desc">Implementación del sistema de alertas o soporte a la decisión clínica</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY CONCEPTS -->
+  <div class="concepts-section">
+    <div class="section-label">§ 04 &nbsp;·&nbsp; Conceptos clave de la unidad</div>
+    <div class="concepts-grid">
+      <div class="concept-chip">
+        <strong>Aprendizaje supervisado</strong>
+        <span>El modelo aprende de datos etiquetados con una variable objetivo conocida (p. ej. deserción: sí/no).</span>
+      </div>
+      <div class="concept-chip">
+        <strong>Validación cruzada</strong>
+        <span>Técnica que divide los datos en k particiones para evaluar la generalización del modelo y evitar sobreajuste.</span>
+      </div>
+      <div class="concept-chip">
+        <strong>Datos desbalanceados</strong>
+        <span>Problema frecuente cuando una clase es mucho más frecuente que otra. Afecta a RL y SVM; XGBoost lo maneja mejor.</span>
+      </div>
+      <div class="concept-chip">
+        <strong>Ingeniería de características</strong>
+        <span>Creación de nuevas variables (p. ej. minutos de espera) que mejoran la capacidad predictiva del modelo.</span>
+      </div>
+      <div class="concept-chip">
+        <strong>TF-IDF</strong>
+        <span>Técnica de NLP que convierte texto clínico (motivo de consulta, antecedentes) en variables numéricas para el modelo.</span>
+      </div>
+      <div class="concept-chip">
+        <strong>SHAP</strong>
+        <span>Método de interpretabilidad que mide la contribución de cada variable a la predicción del modelo (usado con XGBoost).</span>
+      </div>
+      <div class="concept-chip">
+        <strong>Ensemble / Boosting</strong>
+        <span>Estrategias que combinan múltiples modelos débiles. Random Forest usa bagging; XGBoost usa boosting secuencial.</span>
+      </div>
+      <div class="concept-chip">
+        <strong>Métricas de evaluación</strong>
+        <span>Precisión, sensibilidad, F1-score y AUC-ROC permiten comparar el rendimiento más allá del simple accuracy.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-left">
+      Fuentes: <em>Sistema de Alertas Tempranas para Deserción Estudiantil (CECAR, 2023)</em><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<em>Predicción de Desenlaces de Pacientes de Emergencias — Valle del Cauca (Javeriana Cali, 2024)</em>
+    </div>
+    <div class="footer-right">
+      Maestría en Ciencia de Datos<br>
+      Unidad 2 — Minería de Datos<br>
+      2025
+    </div>
+  </footer>
+
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+const modals = {
+  rl: {
+    name: 'Regresión Logística', abbr: 'RL / RLM (Multinomial)',
+    body: `<p>La regresión logística es un modelo estadístico que estima la probabilidad de que una observación pertenezca a una categoría. La variante <strong>multinomial</strong> extiende esta capacidad a más de dos clases de salida, siendo ideal para predecir desenlaces como <em>alta, hospitalización o remisión</em>.</p>
+    <p>En la tesis SAT se usó como modelo de referencia comparativo. En la tesis de Emergencias se evaluó para predecir los cinco desenlaces posibles, encontrando limitaciones en las clases minoritarias (hospitalización, remisión urgente).</p>`,
+    pros: ['Muy interpretable', 'Probabilidades directas', 'Rápido de entrenar', 'No requiere muchos datos'],
+    cons: ['Asume relación lineal', 'Pobre con clases desbalanceadas', 'No captura interacciones complejas']
+  },
+  svm: {
+    name: 'Máquinas de Soporte Vectorial', abbr: 'SVM — Lineal / RBF',
+    body: `<p>Las SVM buscan el hiperplano que maximiza el margen de separación entre clases. El <strong>kernel lineal</strong> es eficaz cuando las clases son linealmente separables. El <strong>kernel RBF</strong> (función de base radial) proyecta los datos a un espacio de mayor dimensión para manejar relaciones no lineales.</p>
+    <p>Ambas tesis aplicaron SVM. En la tesis SAT se probaron ambas variantes; en Emergencias se comparó frente a XGBoost, donde las SVM mostraron limitaciones con datos desbalanceados.</p>`,
+    pros: ['Robusto en dimensiones altas', 'Buena generalización', 'Versátil con kernels'],
+    cons: ['Sensible a escala de datos', 'Difícil de interpretar', 'Mal desempeño con desbalanceo']
+  },
+  rf: {
+    name: 'Bosques Aleatorios', abbr: 'Random Forest (RF)',
+    body: `<p>Random Forest construye un gran número de árboles de decisión sobre submuestras aleatorias del conjunto de entrenamiento (<em>bootstrap</em>) y selecciona aleatoriamente las variables en cada split. La predicción final se obtiene por <strong>votación mayoritaria</strong> entre todos los árboles.</p>
+    <p>En la tesis SAT fue uno de los modelos con mejor desempeño. Permite además estimar la <em>importancia de variables</em>, útil para identificar los factores más predictivos de la deserción.</p>`,
+    pros: ['Muy preciso', 'Resistente al sobreajuste', 'Importancia de variables', 'Maneja valores faltantes'],
+    cons: ['Menos interpretable', 'Más lento que un solo árbol', 'Alto uso de memoria']
+  },
+  nnet: {
+    name: 'Redes Neuronales', abbr: 'NNET — Red Neuronal Simple',
+    body: `<p>Las redes neuronales artificiales están formadas por capas de nodos (neuronas) interconectadas. Cada conexión tiene un peso que se ajusta durante el entrenamiento mediante el algoritmo de <strong>retropropagación</strong> del error. La variante simple (NNET) tiene una capa oculta, a diferencia del deep learning con múltiples capas.</p>
+    <p>En la tesis SAT se evaluó NNET junto a los otros modelos. Su desempeño se midió con validación cruzada y matriz de confusión.</p>`,
+    pros: ['Captura relaciones no lineales', 'Flexible y adaptable', 'Escala con más datos'],
+    cons: ['Caja negra (poca interpretabilidad)', 'Requiere muchos datos', 'Tiempo de entrenamiento alto']
+  },
+  xgb: {
+    name: 'Extreme Gradient Boosting', abbr: 'XGBoost + TF-IDF',
+    body: `<p>XGBoost construye árboles de decisión de forma <strong>secuencial</strong>, donde cada nuevo árbol corrige los errores residuales del anterior, optimizando una función de pérdida mediante descenso por gradiente. Es conocido por su alta precisión y eficiencia computacional.</p>
+    <p>En la tesis de Emergencias, XGBoost fue combinado con variables textuales procesadas mediante <strong>TF-IDF</strong> (motivo de consulta, antecedentes patológicos). Este enriquecimiento del modelo mejoró significativamente la predicción de clases minoritarias como <em>remisión prioritaria</em> y <em>hospitalización</em>. La interpretación de variables se hizo mediante análisis <strong>SHAP</strong>.</p>`,
+    pros: ['Mejor desempeño general', 'Maneja texto y números', 'Robusto con desbalanceo', 'Interpretable con SHAP'],
+    cons: ['Más hiperparámetros', 'Mayor costo computacional', 'Requiere más experimentación']
+  },
+  dt: {
+    name: 'Árboles de Decisión', abbr: 'Decision Trees (DT)',
+    body: `<p>Los árboles de decisión dividen recursivamente el espacio de variables mediante preguntas binarias (p. ej. <em>¿edad > 20?</em>). Cada nodo interno es una condición, cada rama es una respuesta posible y cada hoja es una predicción final.</p>
+    <p>Son la base teórica y estructural de modelos más avanzados como Random Forest y XGBoost. En la tesis SAT se abordaron como componente teórico fundamental del marco de Machine Learning.</p>`,
+    pros: ['Muy interpretable y visual', 'Sin necesidad de normalización', 'Fácil de comunicar'],
+    cons: ['Propenso a sobreajuste', 'Inestable (sensible a cambios)', 'Bajo desempeño solo']
+  }
+};
+
+function openModal(key) {
+  const m = modals[key];
+  const pros = m.pros.map(p => `<li>${p}</li>`).join('');
+  const cons = m.cons.map(c => `<li>${c}</li>`).join('');
+  document.getElementById('modal-content').innerHTML = `
+    <h3>${m.name}</h3>
+    <div class="modal-meta">${m.abbr}</div>
+    ${m.body}
+    <div class="pros-cons">
+      <div class="pros"><strong>✦ Ventajas</strong><ul style="padding-left:14px">${pros}</ul></div>
+      <div class="cons"><strong>✦ Limitaciones</strong><ul style="padding-left:14px">${cons}</ul></div>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>

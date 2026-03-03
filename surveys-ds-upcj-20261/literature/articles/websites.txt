@@ -3,3 +3,6 @@ https://www.epa.gov/caddis/exploratory-data-analysis
 https://datos.gob.es/es/conocimiento/guia-practica-de-introduccion-al-analisis-exploratorio-de-datos-en-R
 --- UNIT 3 ---
 https://iddigitalschool.com/bootcamps/que-son-los-modelos-de-prediccion-en-data-science/
+https://learn.microsoft.com/es-es/azure/cloud-adoption-framework/scenarios/ai/plan
+https://www.ijcsma.com/wp-content/papers/Volume10Issue3/V10I301.pdf
+https://www.northware.mx/blog/que-es-un-modelo-de-analitica-de-datos/
