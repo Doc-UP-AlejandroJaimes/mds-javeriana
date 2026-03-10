@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infografía - Modelos y Métricas de Validación en Ciencia de Datos</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Raleway:wght@300;400;600;700;900&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0A1628;
+    --blue: #1565C0;
+    --cyan: #00B4D8;
+    --teal: #0096C7;
+    --gold: #FFB703;
+    --orange: #FB8500;
+    --white: #F0F4FF;
+    --light: #CAF0F8;
+    --card-bg: rgba(255,255,255,0.06);
+    --border: rgba(0,180,216,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--navy);
+    font-family: 'Raleway', sans-serif;
+    color: var(--white);
+    width: 900px;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* BG grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,180,216,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,180,216,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; padding: 32px; }
+
+  /* HEADER */
+  header {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 20px;
+    align-items: center;
+    border-bottom: 2px solid var(--cyan);
+    padding-bottom: 24px;
+    margin-bottom: 28px;
+  }
+  .logo-wrap img {
+    width: 90px;
+    filter: drop-shadow(0 0 8px rgba(0,180,216,0.5));
+  }
+  .header-text h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem;
+    letter-spacing: 2px;
+    color: var(--white);
+    line-height: 1.1;
+  }
+  .header-text h1 span { color: var(--cyan); }
+  .header-subtitle {
+    font-size: 0.78rem;
+    color: var(--light);
+    opacity: 0.75;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .author-badge {
+    display: inline-block;
+    margin-top: 8px;
+    background: linear-gradient(90deg, var(--blue), var(--teal));
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* INTRO BOX */
+  .intro-box {
+    background: linear-gradient(135deg, rgba(21,101,192,0.25), rgba(0,150,199,0.15));
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--cyan);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    color: var(--light);
+  }
+  .intro-box strong { color: var(--gold); }
+
+  /* SECTION TITLES */
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.35rem;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--cyan), transparent);
+  }
+  .section-icon {
+    width: 28px; height: 28px;
+    background: var(--cyan);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem;
+  }
+
+  /* PIPELINE */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-bottom: 28px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .pipe-step {
+    flex: 1;
+    padding: 14px 12px;
+    text-align: center;
+    position: relative;
+  }
+  .pipe-step:nth-child(1) { background: rgba(21,101,192,0.4); }
+  .pipe-step:nth-child(2) { background: rgba(0,150,199,0.35); }
+  .pipe-step:nth-child(3) { background: rgba(0,180,216,0.3); }
+  .pipe-step:nth-child(4) { background: rgba(0,196,180,0.3); }
+  .pipe-step:nth-child(5) { background: rgba(255,183,3,0.2); border-right: none; }
+  .pipe-step + .pipe-step::before {
+    content: '▶';
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--cyan);
+    font-size: 0.9rem;
+    z-index: 2;
+  }
+  .pipe-icon { font-size: 1.5rem; margin-bottom: 4px; }
+  .pipe-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--light); }
+  .pipe-desc { font-size: 0.58rem; color: rgba(255,255,255,0.6); margin-top: 3px; }
+
+  /* MODELS GRID */
+  .models-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .model-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .model-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .model-card.rl::before { background: linear-gradient(90deg, #1565C0, #00B4D8); }
+  .model-card.svm::before { background: linear-gradient(90deg, #6A0DAD, #D63BFF); }
+  .model-card.rf::before { background: linear-gradient(90deg, #1B7A3E, #2ECC71); }
+  .model-card.nn::before { background: linear-gradient(90deg, #C0392B, #FF8A65); }
+
+  .model-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .model-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .rl .model-icon { background: rgba(21,101,192,0.3); }
+  .svm .model-icon { background: rgba(106,13,173,0.3); }
+  .rf .model-icon { background: rgba(27,122,62,0.3); }
+  .nn .model-icon { background: rgba(192,57,43,0.3); }
+
+  .model-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: 1.5px;
+    line-height: 1.1;
+  }
+  .model-full { font-size: 0.65rem; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .model-desc {
+    font-size: 0.74rem;
+    line-height: 1.55;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 10px;
+  }
+
+  .metric-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .metric-chip {
+    background: rgba(0,180,216,0.15);
+    border: 1px solid rgba(0,180,216,0.3);
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-size: 0.62rem;
+    font-family: 'Source Code Pro', monospace;
+    color: var(--light);
+    white-space: nowrap;
+  }
+
+  .result-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .bar-label { font-size: 0.62rem; color: rgba(255,255,255,0.55); width: 68px; flex-shrink: 0; text-align: right; }
+  .bar-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    position: relative;
+  }
+  .rl .bar-fill { background: linear-gradient(90deg, #1565C0, #00B4D8); }
+  .svm .bar-fill { background: linear-gradient(90deg, #6A0DAD, #D63BFF); }
+  .rf .bar-fill { background: linear-gradient(90deg, #1B7A3E, #2ECC71); }
+  .nn .bar-fill { background: linear-gradient(90deg, #C0392B, #FF8A65); }
+  .bar-value { font-size: 0.65rem; font-weight: 700; font-family: 'Source Code Pro', monospace; width: 32px; }
+
+  /* CV SECTION */
+  .cv-section {
+    margin-bottom: 28px;
+  }
+  .cv-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .cv-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .cv-icon { font-size: 1.6rem; margin-bottom: 6px; }
+  .cv-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 6px; }
+  .cv-text { font-size: 0.68rem; color: rgba(255,255,255,0.75); line-height: 1.5; }
+
+  /* METRICS SECTION */
+  .metrics-section { margin-bottom: 28px; }
+  .metrics-big-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .metric-formula {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.58rem;
+    color: var(--cyan);
+    margin-bottom: 4px;
+    min-height: 16px;
+  }
+  .metric-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+  .metric-def { font-size: 0.63rem; color: rgba(255,255,255,0.65); line-height: 1.4; }
+
+  /* CONFUSION MATRIX */
+  .cm-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+    align-items: start;
+  }
+  .cm-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.7rem;
+  }
+  .cm-table th, .cm-table td {
+    border: 1px solid var(--border);
+    padding: 8px 6px;
+    text-align: center;
+  }
+  .cm-table th {
+    background: rgba(21,101,192,0.3);
+    color: var(--cyan);
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .cm-tp { background: rgba(46,204,113,0.2); color: #2ECC71; font-weight: 700; }
+  .cm-tn { background: rgba(46,204,113,0.15); color: #A8E6CF; font-weight: 700; }
+  .cm-fp { background: rgba(231,76,60,0.15); color: #FF8A80; }
+  .cm-fn { background: rgba(231,76,60,0.2); color: #E74C3C; }
+  .cm-legend { font-size: 0.65rem; margin-top: 10px; }
+  .cm-legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .stats-tests {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .test-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .test-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .test-badge {
+    background: linear-gradient(135deg, var(--blue), var(--teal));
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .test-info { font-size: 0.68rem; color: rgba(255,255,255,0.75); line-height: 1.5; }
+  .test-info strong { color: var(--gold); }
+
+  /* COMPARISON TABLE */
+  .comparison-section { margin-bottom: 28px; }
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.73rem;
+  }
+  .comp-table th {
+    background: rgba(21,101,192,0.35);
+    color: var(--cyan);
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 2px solid var(--cyan);
+  }
+  .comp-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.85);
+  }
+  .comp-table tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
+  .comp-table tr.best td { background: rgba(255,183,3,0.08); }
+  .best-badge {
+    background: var(--gold);
+    color: var(--navy);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .acc-val { font-family: 'Source Code Pro', monospace; font-weight: 600; }
+  .acc-high { color: #2ECC71; }
+  .acc-med { color: var(--gold); }
+
+  /* TRAIN-TEST SPLIT VISUAL */
+  .split-vis {
+    display: flex;
+    height: 36px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 10px 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .split-train {
+    width: 80%;
+    background: linear-gradient(90deg, var(--blue), var(--teal));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 1px;
+  }
+  .split-test {
+    width: 20%;
+    background: linear-gradient(90deg, var(--orange), var(--gold));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--navy);
+    letter-spacing: 1px;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .footer-info { font-size: 0.65rem; color: rgba(255,255,255,0.5); line-height: 1.6; }
+  .footer-info strong { color: var(--cyan); }
+  .footer-source {
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.4);
+    text-align: right;
+    font-style: italic;
+  }
+
+  /* HIGHLIGHT BOX */
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(255,183,3,0.12), rgba(251,133,0,0.08));
+    border: 1px solid rgba(255,183,3,0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 28px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .highlight-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .highlight-text { font-size: 0.73rem; color: rgba(255,255,255,0.85); line-height: 1.6; }
+  .highlight-text strong { color: var(--gold); }
+
+  /* SPLIT-VIEW */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    color: var(--cyan);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag {
+    background: rgba(0,180,216,0.12);
+    border: 1px solid rgba(0,180,216,0.25);
+    border-radius: 4px;
+    padding: 3px 9px;
+    font-size: 0.63rem;
+    color: var(--light);
+  }
+  .tag.gold { background: rgba(255,183,3,0.12); border-color: rgba(255,183,3,0.3); color: var(--gold); }
+
+  .kpi-list { display: flex; flex-direction: column; gap: 8px; }
+  .kpi-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+  }
+  .kpi-label { color: rgba(255,255,255,0.65); }
+  .kpi-val {
+    font-family: 'Source Code Pro', monospace;
+    font-weight: 600;
+    color: #2ECC71;
+    font-size: 0.78rem;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-wrap">
+      <img src="https://www.cccs.org.co/wp-content/uploads/2024/12/logo-javeriana-cali-1.jpg" alt="Pontificia Universidad Javeriana Cali" onerror="this.style.display='none'">
+    </div>
+    <div class="header-text">
+      <h1>Modelos y Métricas de <span>Validación</span><br>en Ciencia de Datos</h1>
+      <div class="header-subtitle">Infografía · M1U4 · Retos en Ciencia de Datos · 2026</div>
+      <div class="author-badge">Juan Alejandro Carrillo Jaimes · Est. Maestría Ciencia de Datos</div>
+    </div>
+  </header>
+
+  <!-- INTRO -->
+  <div class="intro-box">
+    Basado en el análisis de la tesis <strong>"Modelo predictivo para la detección temprana del riesgo de deserción estudiantil en la Pontificia Universidad Javeriana Cali — SAT"</strong>, se identificaron cuatro modelos de clasificación y sus respectivas métricas de validación. El proyecto utilizó un conjunto de <strong>1.957 registros</strong> con <strong>97 variables</strong> sociodemográficas y académicas para predecir deserción universitaria con Machine Learning.
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="section-title"><span class="section-icon">⚙</span>Pipeline de Modelado Supervisado</div>
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-icon">📦</div>
+      <div class="pipe-title">Datos</div>
+      <div class="pipe-desc">Recolección & limpieza</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🔬</div>
+      <div class="pipe-title">Preproceso</div>
+      <div class="pipe-desc">Selección variables & reducción dimensional</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🧠</div>
+      <div class="pipe-title">Entrenamiento</div>
+      <div class="pipe-desc">80% datos · tuning hiperparámetros</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🔁</div>
+      <div class="pipe-title">Validación CV</div>
+      <div class="pipe-desc">10 folds × 5 repeticiones</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-icon">✅</div>
+      <div class="pipe-title">Evaluación</div>
+      <div class="pipe-desc">20% test · métricas finales</div>
+    </div>
+  </div>
+
+  <!-- TRAIN/TEST SPLIT -->
+  <div style="margin-bottom:28px;">
+    <div class="section-title"><span class="section-icon">✂</span>División Entrenamiento / Prueba</div>
+    <div class="split-vis">
+      <div class="split-train">🏋 ENTRENAMIENTO — 80%</div>
+      <div class="split-test">🧪 TEST 20%</div>
+    </div>
+    <div style="font-size:0.65rem;color:rgba(255,255,255,0.5);margin-top:6px;">La separación garantiza que la evaluación final se realice sobre datos no vistos durante el entrenamiento, evitando sobreajuste (overfitting).</div>
+  </div>
+
+  <!-- MODELS -->
+  <div class="section-title"><span class="section-icon">🤖</span>Modelos de Clasificación Utilizados</div>
+  <div class="models-grid">
+
+    <!-- REGRESIÓN LOGÍSTICA -->
+    <div class="model-card rl">
+      <div class="model-header">
+        <div class="model-icon">📈</div>
+        <div>
+          <div class="model-name">Regresión Logística</div>
+          <div class="model-full">Logistic Regression · Baseline</div>
+        </div>
+      </div>
+      <div class="model-desc">Modelo probabilístico que estima la probabilidad de deserción a partir de 8 variables predictoras seleccionadas por criterio estadístico y de negocio. Sirve como línea base de comparación.</div>
+      <div class="metric-row">
+        <span class="metric-chip">Coef. β</span>
+        <span class="metric-chip">Odds Ratio</span>
+        <span class="metric-chip">p-valor</span>
+        <span class="metric-chip">AIC</span>
+      </div>
+      <div class="result-bar">
+        <span class="bar-label">Accuracy</span>
+        <div class="bar-track"><div class="bar-fill" style="width:92%"></div></div>
+        <span class="bar-value acc-high">92%</span>
+      </div>
+      <div class="result-bar">
+        <span class="bar-label">Kappa</span>
+        <div class="bar-track"><div class="bar-fill" style="width:74%"></div></div>
+        <span class="bar-value acc-med">0.74</span>
+      </div>
+    </div>
+
+    <!-- SVM -->
+    <div class="model-card svm">
+      <div class="model-header">
+        <div class="model-icon">⚡</div>
+        <div>
+          <div class="model-name">SVM Lineal & Radial</div>
+          <div class="model-full">Support Vector Machine · C=10</div>
+        </div>
+      </div>
+      <div class="model-desc">Máquina de Soporte Vectorial que maximiza el margen entre clases. Se evaluaron kernels lineal y radial (RBF). Mejor configuración: C=10 (regularización). Error de clasificación: 9.39%.</div>
+      <div class="metric-row">
+        <span class="metric-chip">Kernel lineal</span>
+        <span class="metric-chip">Kernel RBF</span>
+        <span class="metric-chip">C=10</span>
+        <span class="metric-chip">Margen</span>
+      </div>
+      <div class="result-bar">
+        <span class="bar-label">Accuracy</span>
+        <div class="bar-track"><div class="bar-fill" style="width:94%"></div></div>
+        <span class="bar-value acc-high">94%</span>
+      </div>
+      <div class="result-bar">
+        <span class="bar-label">Error</span>
+        <div class="bar-track"><div class="bar-fill" style="width:9%"></div></div>
+        <span class="bar-value" style="color:#FF8A65">9.4%</span>
+      </div>
+    </div>
+
+    <!-- RANDOM FOREST -->
+    <div class="model-card rf">
+      <div class="model-header">
+        <div class="model-icon">🌲</div>
+        <div>
+          <div class="model-name">Random Forest</div>
+          <div class="model-full">Ensemble · 500 árboles · Gini</div>
+        </div>
+      </div>
+      <div class="model-desc">Ensamble de 500 árboles de decisión con muestreo aleatorio. Parámetros óptimos: mtry=3, min.node.size=30, splitrule="gini". Mejor accuracy del estudio. Error de clasificación: 6.05%.</div>
+      <div class="metric-row">
+        <span class="metric-chip">mtry=3</span>
+        <span class="metric-chip">500 trees</span>
+        <span class="metric-chip">Gini</span>
+        <span class="metric-chip">OOB Error</span>
+      </div>
+      <div class="result-bar">
+        <span class="bar-label">Accuracy</span>
+        <div class="bar-track"><div class="bar-fill" style="width:94%"></div></div>
+        <span class="bar-value acc-high">94%</span>
+      </div>
+      <div class="result-bar">
+        <span class="bar-label">Error</span>
+        <div class="bar-track"><div class="bar-fill" style="width:6%"></div></div>
+        <span class="bar-value" style="color:#A8E6CF">6.05%</span>
+      </div>
+    </div>
+
+    <!-- NNET -->
+    <div class="model-card nn">
+      <div class="model-header">
+        <div class="model-icon">🧬</div>
+        <div>
+          <div class="model-name">Red Neuronal (NNET)</div>
+          <div class="model-full">Neural Network · size=3 · decay=0.1</div>
+        </div>
+      </div>
+      <div class="model-desc">Red neuronal simple implementada con librería Caret. Hiperparámetros: 3 capas ocultas (size=3) y regularización decay=0.1 para evitar sobreajuste. Error de clasificación: 6.47%.</div>
+      <div class="metric-row">
+        <span class="metric-chip">size=3</span>
+        <span class="metric-chip">decay=0.1</span>
+        <span class="metric-chip">Backprop</span>
+        <span class="metric-chip">Regulariz.</span>
+      </div>
+      <div class="result-bar">
+        <span class="bar-label">Accuracy</span>
+        <div class="bar-track"><div class="bar-fill" style="width:94%"></div></div>
+        <span class="bar-value acc-high">94%</span>
+      </div>
+      <div class="result-bar">
+        <span class="bar-label">Error</span>
+        <div class="bar-track"><div class="bar-fill" style="width:6.5%"></div></div>
+        <span class="bar-value" style="color:#FF8A65">6.47%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- VALIDACIÓN CRUZADA -->
+  <div class="cv-section">
+    <div class="section-title"><span class="section-icon">🔁</span>Técnicas de Validación Cruzada</div>
+    <div class="cv-grid">
+      <div class="cv-card">
+        <div class="cv-icon">✂️</div>
+        <div class="cv-title">K-Fold CV</div>
+        <div class="cv-text">Divide el conjunto en <strong>K particiones</strong>. El modelo se entrena K veces usando K-1 folds. Se usaron <strong>10 particiones</strong> para mayor robustez. Aplicado en SVM, RF y NNET.</div>
+      </div>
+      <div class="cv-card">
+        <div class="cv-icon">🔄</div>
+        <div class="cv-title">Repeated CV</div>
+        <div class="cv-text">El proceso K-Fold se repite <strong>5 veces</strong> con particiones aleatorias diferentes. Reduce la varianza de las estimaciones. Estrategia ideal para datasets pequeños (n&lt;2000).</div>
+      </div>
+      <div class="cv-card">
+        <div class="cv-icon">🎯</div>
+        <div class="cv-title">Resampling & Tuning</div>
+        <div class="cv-text">Búsqueda de <strong>hiperparámetros óptimos</strong> mediante grilla (Grid Search) evaluada en cada fold. Garantiza que los parámetros no generen sobreajuste al conjunto de entrenamiento.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÉTRICAS -->
+  <div class="metrics-section">
+    <div class="section-title"><span class="section-icon">📊</span>Métricas de Evaluación</div>
+    <div class="metrics-big-grid">
+      <div class="metric-card">
+        <div class="metric-formula">TP+TN / Total</div>
+        <div class="metric-name">Accuracy</div>
+        <div class="metric-def">Proporción de predicciones correctas sobre el total. Principal métrica del estudio. Línea base: 62%.</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-formula">(Po - Pe) / (1 - Pe)</div>
+        <div class="metric-name">Kappa</div>
+        <div class="metric-def">Mide acuerdo entre predicciones y realidad, ajustando por coincidencia aleatoria. Valores &gt;0.7 indican acuerdo sustancial.</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-formula">TP / (TP + FP)</div>
+        <div class="metric-name">Precisión</div>
+        <div class="metric-def">De todas las predicciones de deserción, ¿cuántas fueron realmente desertores? Reduce falsos positivos.</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-formula">TP / (TP + FN)</div>
+        <div class="metric-name">Recall / Sensib.</div>
+        <div class="metric-def">De todos los desertores reales, ¿cuántos detectó el modelo? Crítico para no perder casos de riesgo.</div>
+      </div>
+    </div>
+
+    <!-- CONFUSION MATRIX + TESTS -->
+    <div class="cm-section">
+      <div>
+        <div style="font-size:0.72rem;font-weight:700;color:var(--gold);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Matriz de Confusión</div>
+        <table class="cm-table">
+          <tr>
+            <th></th>
+            <th>Pred: No deserta</th>
+            <th>Pred: Deserta</th>
+          </tr>
+          <tr>
+            <th>Real: No deserta</th>
+            <td class="cm-tn">TN ✓</td>
+            <td class="cm-fp">FP ✗</td>
+          </tr>
+          <tr>
+            <th>Real: Deserta</th>
+            <td class="cm-fn">FN ✗</td>
+            <td class="cm-tp">TP ✓</td>
+          </tr>
+        </table>
+        <div class="cm-legend" style="margin-top:10px;">
+          <div class="cm-legend-item"><span class="dot" style="background:#2ECC71"></span><span style="font-size:0.63rem;color:rgba(255,255,255,0.7)"><strong>TP</strong> Verdadero Positivo · <strong>TN</strong> Verdadero Negativo</span></div>
+          <div class="cm-legend-item"><span class="dot" style="background:#E74C3C"></span><span style="font-size:0.63rem;color:rgba(255,255,255,0.7)"><strong>FP</strong> Falso Positivo · <strong>FN</strong> Falso Negativo</span></div>
+        </div>
+      </div>
+
+      <div class="stats-tests">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--gold);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Pruebas Estadísticas de Comparación</div>
+        <div class="test-item">
+          <div class="test-badge">Friedman</div>
+          <div class="test-info">Prueba no paramétrica para comparar múltiples modelos. Con α=0.05 <strong>no se encontraron diferencias significativas</strong> entre los cuatro modelos.</div>
+        </div>
+        <div class="test-item">
+          <div class="test-badge">Wilcoxon</div>
+          <div class="test-info">Test post-hoc por pares. Confirmó que <strong>ningún modelo supera estadísticamente</strong> a los demás en capacidad predictiva.</div>
+        </div>
+        <div class="test-item">
+          <div class="test-badge">Error Test</div>
+          <div class="test-info">Validación final con datos de prueba: todos los modelos mantienen <strong>exactitud sobresaliente</strong>, confirmando ausencia de sobreajuste.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="comparison-section">
+    <div class="section-title"><span class="section-icon">🏆</span>Comparación Final de Modelos</div>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Modelo</th>
+          <th>Accuracy Medio CV</th>
+          <th>Kappa</th>
+          <th>Error Clasificación</th>
+          <th>Hiperparámetro Clave</th>
+          <th>Ranking</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="best">
+          <td>🌲 Random Forest</td>
+          <td><span class="acc-val acc-high">94%</span></td>
+          <td><span class="acc-val acc-high">Alto</span></td>
+          <td><span class="acc-val acc-high">6.05%</span></td>
+          <td>mtry=3, 500 árboles</td>
+          <td><span class="best-badge">🥇 Mejor</span></td>
+        </tr>
+        <tr>
+          <td>🧬 NNET</td>
+          <td><span class="acc-val acc-high">94%</span></td>
+          <td><span class="acc-val acc-high">Alto</span></td>
+          <td><span class="acc-val acc-med">6.47%</span></td>
+          <td>size=3, decay=0.1</td>
+          <td>🥈 2do</td>
+        </tr>
+        <tr>
+          <td>⚡ SVM Lineal</td>
+          <td><span class="acc-val acc-high">94%</span></td>
+          <td><span class="acc-val acc-high">Alto</span></td>
+          <td><span class="acc-val" style="color:#FFB703">9.39%</span></td>
+          <td>C=10</td>
+          <td>🥉 3ro</td>
+        </tr>
+        <tr>
+          <td>📈 Reg. Logística</td>
+          <td><span class="acc-val acc-med">92%</span></td>
+          <td><span class="acc-val acc-med">0.74</span></td>
+          <td><span class="acc-val" style="color:#FF8A65">8%</span></td>
+          <td>8 predictoras</td>
+          <td>Baseline</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TWO COLUMN: TOOLS + CONCLUSIONS -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">🛠 Herramientas & Tecnologías</div>
+      <div class="tag-list">
+        <span class="tag">R / Caret</span>
+        <span class="tag">randomForest</span>
+        <span class="tag">e1071 (SVM)</span>
+        <span class="tag">nnet</span>
+        <span class="tag">ggplot2</span>
+        <span class="tag gold">Azure Synapse</span>
+        <span class="tag gold">DWH</span>
+        <span class="tag">Cross-validation</span>
+        <span class="tag">Grid Search</span>
+        <span class="tag">Confusion Matrix</span>
+        <span class="tag">Friedman Test</span>
+        <span class="tag">Wilcoxon Test</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">📌 KPIs Clave del Estudio</div>
+      <div class="kpi-list">
+        <div class="kpi-item"><span class="kpi-label">Registros estudiantes</span><span class="kpi-val">1,957</span></div>
+        <div class="kpi-item"><span class="kpi-label">Variables analizadas</span><span class="kpi-val">97</span></div>
+        <div class="kpi-item"><span class="kpi-label">Variables predictoras finales</span><span class="kpi-val">8</span></div>
+        <div class="kpi-item"><span class="kpi-label">Línea base accuracy</span><span class="kpi-val">62%</span></div>
+        <div class="kpi-item"><span class="kpi-label">Mejor accuracy (RF)</span><span class="kpi-val">94%</span></div>
+        <div class="kpi-item"><span class="kpi-label">Mejora sobre línea base</span><span class="kpi-val">+32%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIGHLIGHT -->
+  <div class="highlight-box">
+    <div class="highlight-icon">💡</div>
+    <div class="highlight-text">
+      <strong>Conclusión clave:</strong> Las pruebas estadísticas de Friedman y Wilcoxon demostraron que no existen diferencias significativas entre los cuatro modelos (α=0.05). Sin embargo, <strong>Random Forest</strong> obtiene el menor error de clasificación (6.05%) y mayor accuracy promedio (94%), constituyéndose como el modelo recomendado para implementar el <strong>Sistema de Alertas Tempranas (SAT)</strong> de detección de deserción universitaria.
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-info">
+      <strong>Juan Alejandro Carrillo Jaimes</strong> · Estudiante Maestría en Ciencia de Datos<br>
+      Materia: Retos en Ciencia de Datos · Pontificia Universidad Javeriana Cali · 2026
+    </div>
+    <div class="footer-source">
+      Basado en: Tesis SAT — Predicción deserción estudiantil<br>
+      Biblioteca Vitela · javerianacali.edu.co · M1U4
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
