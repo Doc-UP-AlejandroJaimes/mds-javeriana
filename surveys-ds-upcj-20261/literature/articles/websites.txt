@@ -6,3 +6,15 @@ https://iddigitalschool.com/bootcamps/que-son-los-modelos-de-prediccion-en-data-
 https://learn.microsoft.com/es-es/azure/cloud-adoption-framework/scenarios/ai/plan
 https://www.ijcsma.com/wp-content/papers/Volume10Issue3/V10I301.pdf
 https://www.northware.mx/blog/que-es-un-modelo-de-analitica-de-datos/
+--UNIT 4---
+https://www.clickworker.com/customer-blog/how-to-validate-machine-learning-models/
+https://deepchecks.com/evaluating-model-performance-using-validation-dataset-splits-and-cross-validation-techniques/
+https://deepchecks.com/ml-model-validation-how-to-work-with-an-open-source-platform/
+https://medium.com/@soumyachess1496/cross-validation-in-time-series-566ae4981ce4
+https://towardsdatascience.com/how-to-cross-validation-with-time-series-data-9802a06272c6/#:~:text=Now%20that%20the%20object%20and,a%20scoring%20metric(s).&text=If%20you%20want%20to%20cross,mean()%20on%20the%20test_score.&text=With%20this%2C%20you'll%20have,techniques%20to%20time%20series%20data.&text=%22TimeSeriesSplit.%22%20scikit%2Dlearn,.model_selection.TimeSeriesSplit.html.
+https://www.geeksforgeeks.org/machine-learning/cross-validation-machine-learning/
+--UNIT5---
+https://www.datascience-pm.com/crisp-dm-2/
+https://medium.com/@dnyaneshwalwadkar/deployment-challenges-for-data-science-projects-9eb8b3bd8365
+https://medium.com/whats-data-science/data-visualization-how-to-use-it-to-your-advantage-cc14286c838
+

@@ -1,0 +1,2 @@
+DANE Censo Agrario: https://sitios.dane.gov.co/cna-dashboard/#/national
+IDEAM Estaciones: https://www.ideam.gov.co/nuestra-entidad/servicio-de-pronosticos-y-alertas
