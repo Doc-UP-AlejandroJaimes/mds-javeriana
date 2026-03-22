@@ -1,0 +1,413 @@
+---
+title: "Problema 4: Estimación de intervalos de confianza"
+subtitle: "Simulación, Estimación e Inferencia Estadística · 2026-A"
+author: "Integrantes: Juan Alejandro Carrillo Jaimes & David Burgoa"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = 'center',
+  out.width = '85%',
+  encoding  = "UTF-8"
+)
+options(scipen = 999)
+
+# Estilo para las tablas kable
+library(kableExtra)
+library(ggplot2)
+```
+# Descripción del Problema
+```{r banner-p3, echo=FALSE, fig.cap="Planta de fabricación de componentes electrónicos"}
+knitr::include_graphics("assets/problem-4-est-inter.png")
+```
+
+Una empresa dedicada a la generación de energía renovable desea evaluar el 
+rendimiento de sus 20 generadores eléctricos portátiles, alimentados con 
+biocombustible. Estos generadores se utilizan en proyectos remotos, donde la 
+eficiencia energética es crucial para minimizar costos y reducir la huella 
+ambiental. Para el estudio, se mide la eficiencia energética de cada generador, 
+expresada en kilovatios-hora por litro de combustible (kWh/L).
+
+**Objetivo**: Determinar intervalos de confianza al 95% para la eficiencia media.
+
+## Normalidad
+
+Antes de calcular intervalos de confianza paramétricos, se verifica si la
+muestra de eficiencia energética proviene de una población normal.
+
+```{r p4-datos}
+muestra <- c(6.12, 5.87, 5.45, 6.33, 5.71, 6.04, 5.92, 5.65, 6.18,
+             5.78, 5.95, 6.21, 5.63, 5.79, 6.11, 5.88, 6.02, 5.76,
+             5.85, 6.10)
+
+n_p4  <- length(muestra)
+media <- mean(muestra)
+desv  <- sd(muestra)
+err   <- desv / sqrt(n_p4)
+
+tabla_desc <- data.frame(
+  Estadistico = c("$n$", "$\\bar{x}$", "$s$", "$s/\\sqrt{n}$"),
+  Valor       = c(as.character(n_p4),
+                  round(media, 4),
+                  round(desv, 4),
+                  round(err, 4)),
+  Unidad      = c("observaciones", "kWh/L", "kWh/L", "kWh/L")
+)
+
+knitr::kable(tabla_desc,
+  caption   = "Estadísticos descriptivos — eficiencia energética",
+  col.names = c("Estadístico", "Valor", "Unidad"),
+  align     = c("c", "c", "l"),
+  format    = "html",
+  escape    = FALSE
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+```{r p4-histograma, fig.cap="Histograma y curva de densidad — eficiencia energética (kWh/L)"}
+df_p4 <- data.frame(x = muestra)
+
+ggplot(df_p4, aes(x = x)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins  = 8,
+                 fill  = "#e07b39",
+                 color = "white",
+                 alpha = 0.85) +
+  geom_density(color = "#2d6a4f", linewidth = 1.2) +
+  geom_vline(xintercept = media, linetype = "dashed",
+             color = "#9b2226", linewidth = 1) +
+  annotate("text", x = media + 0.07, y = 2.1,
+           label = paste0("\u03bc = ", round(media, 4), " kWh/L"),
+           color = "#9b2226", size = 4, fontface = "bold") +
+  labs(
+    x = "Eficiencia energética (kWh/L)",
+    y = "Densidad"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.title       = element_text(face = "bold")
+  )
+```
+
+```{r p4-normalidad}
+test_p4 <- shapiro.test(muestra)
+
+# Tabla de hipótesis
+tabla_norm_p4 <- data.frame(
+  Hipotesis   = c("$H_0$", "$H_1$"),
+  Descripcion = c("La muestra proviene de una población normal",
+                  "La muestra no proviene de una población normal")
+)
+
+knitr::kable(tabla_norm_p4,
+  caption   = "Hipótesis del test de normalidad",
+  col.names = c("Hipótesis", "Descripción"),
+  align     = c("c", "l"),
+  format    = "html",
+  escape    = FALSE
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+```{r p4-resultado-normalidad}
+# Tabla de resultados
+tabla_res_p4 <- data.frame(
+  Prueba     = "Shapiro-Wilk",
+  W          = round(test_p4$statistic, 4),
+  p_valor    = round(test_p4$p.value, 4),
+  Alpha      = 0.05,
+  Conclusion = ifelse(test_p4$p.value > 0.05,
+                      "No se rechaza H\u2080 \u2014 normalidad",
+                      "Se rechaza H\u2080 \u2014 no normalidad")
+)
+rownames(tabla_res_p4) <- NULL
+
+knitr::kable(tabla_res_p4,
+  caption   = "Resultado del test de normalidad Shapiro-Wilk",
+  col.names = c("Prueba", "W", "p-valor", "\u03b1", "Conclusión"),
+  align     = c("l", "c", "c", "c", "l"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+La Figura \@ref(fig:p4-histograma) muestra una distribución aproximadamente
+simétrica y acampanada, centrada en $\bar{x} = 5.9175$ kWh/L, lo que sugiere
+visualmente que la población podría ser normal.
+
+La Tabla \@ref(tab:p4-resultado-normalidad) confirma esto: el test de
+Shapiro-Wilk arrojó $W = 0.9884$ y un p-valor de $0.9955$, muy superior a
+$\alpha = 0.05$. Por lo tanto, **no se rechaza $H_0$**, lo que indica que la
+muestra proviene de una población normal. Esto valida el uso de métodos
+paramétricos para calcular el intervalo de confianza.
+
+## Método paramétrico
+
+Dado que en el Punto 1 se verificó que la muestra proviene de una población
+normal ($W = 0.9884$, $p = 0.9955 > \alpha = 0.05$), se cumplen las
+condiciones para aplicar un intervalo de confianza paramétrico. Como la
+varianza poblacional $\sigma^2$ es desconocida y $n = 20 < 30$, según la
+Tabla 2.9 del módulo se utiliza la distribución $t$ de Student con
+$v = n - 1 = 19$ grados de libertad:
+
+$$\bar{x} \pm t_{\alpha/2,\, v} \cdot \frac{s}{\sqrt{n}}$$
+
+```{r p4-parametrico}
+alpha_ic  <- 0.05
+t_critico <- qt(1 - alpha_ic / 2, df = n_p4 - 1)
+
+li_t <- media - t_critico * (desv / sqrt(n_p4))
+ls_t <- media + t_critico * (desv / sqrt(n_p4))
+
+tabla_ic_t <- data.frame(
+  Metodo    = "t de Student",
+  gl        = n_p4 - 1,
+  t_critico = round(t_critico, 4),
+  LI        = round(li_t, 4),
+  Media     = round(media, 4),
+  LS        = round(ls_t, 4),
+  Amplitud  = round(ls_t - li_t, 4)
+)
+
+knitr::kable(tabla_ic_t,
+  caption   = "Intervalo de confianza paramétrico al 95% — t de Student",
+  col.names = c("Método", "g.l.", "t crítico",
+                "Límite inferior", "Media", "Límite superior", "Amplitud"),
+  align     = c("l","c","c","c","c","c","c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+Con un nivel de confianza del 95%, el intervalo de confianza paramétrico para
+la eficiencia media de los generadores es $[5.813, 6.022]$ kWh/L. Esto
+significa que, si se repitiera el muestreo múltiples veces, aproximadamente
+el 95% de los intervalos construidos contendrían la verdadero media
+poblacional. La amplitud del intervalo es de $0.2089$ kWh/L, lo que indica
+una estimación bastante precisa dado el tamaño muestral de $n = 20$.
+
+La comparación con los intervalos bootstrap se realizará al finalizar el
+Punto 3.
+
+## Procedimiento bootstrap
+
+Se aplican dos métodos bootstrap para estimar el intervalo de confianza al
+95% para la media de eficiencia energética: el método **percentil bootstrap**
+y el método **normal bootstrap**. Se usa $B = 1000$ muestras bootstrap y
+semilla `set.seed(1005062032)`.
+
+### Intervalo percentil bootstrap
+
+Se eligen los métodos **percentil bootstrap** y **normal bootstrap** porque:
+
+- El **percentil bootstrap** no asume ninguna forma distribucional y se
+  basa únicamente en los cuantiles empíricos de las medias bootstrap,
+  siendo el método más directo e intuitivo.
+- El **normal bootstrap** es adecuado cuando, como en este caso, las
+  medias bootstrap siguen una distribución aproximadamente normal,
+  consistente con el TLC para $B = 1000$ remuestras.
+
+Se descarta el método BCa por su mayor complejidad computacional y porque
+la simetría observada en los datos no lo hace necesario.
+
+El intervalo percentil bootstrap se obtiene ordenando las $B = 1000$ medias
+bootstrap y tomando los percentiles $\alpha/2$ y $1 - \alpha/2$:
+
+$$IC_{percentil} = \left[\hat{\theta}^*_{\lfloor B \cdot \alpha/2 \rfloor + 1},\;
+\hat{\theta}^*_{\lfloor B \cdot (1-\alpha/2) \rfloor}\right] =
+\left[\hat{\theta}^*_{26},\; \hat{\theta}^*_{975}\right]$$
+
+```{r p4-bootstrap-percentil}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+B <- 1000
+
+# Generar B muestras bootstrap y calcular la media de cada una
+boot_medias <- replicate(B, mean(sample(muestra, size = n_p4, replace = TRUE)))
+
+# Ordenar las medias bootstrap
+boot_sorted <- sort(boot_medias)
+
+# Percentiles para IC al 95%
+alpha_boot  <- 0.05
+li_perc <- boot_sorted[floor(B * alpha_boot / 2) + 1]
+ls_perc <- boot_sorted[floor(B * (1 - alpha_boot / 2))]
+
+tabla_perc <- data.frame(
+  Metodo   = "Percentil bootstrap",
+  B        = B,
+  LI       = round(li_perc, 4),
+  Media    = round(mean(boot_medias), 4),
+  LS       = round(ls_perc, 4),
+  Amplitud = round(ls_perc - li_perc, 4)
+)
+
+knitr::kable(tabla_perc,
+  caption   = "Intervalo de confianza percentil bootstrap al 95%",
+  col.names = c("Método", "B", "Límite inferior",
+                "Media bootstrap", "Límite superior", "Amplitud"),
+  align     = c("l","c","c","c","c","c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+El intervalo percentil bootstrap al 95% es $[5.8195, 6.0085]$ kWh/L,
+con una amplitud de $0.189$ kWh/L. Este resultado indica que, basado
+en el remuestreo, la eficiencia media poblacional se encuentra en ese
+rango con una confianza del 95%.
+
+### Intervalo normal bootstrap
+
+El intervalo normal bootstrap utiliza la media y desviación estándar de
+las medias bootstrap con el valor crítico $z_{\alpha/2} = 1.96$:
+
+$$IC_{normal} = \bar{\theta}^* \pm z_{\alpha/2} \cdot s_{\theta^*} =
+5.9149 \pm 1.96 \times 0.0480 = [5.821,\; 6.009]$$
+
+```{r p4-bootstrap-normal}
+# Media y desviación estándar de las medias bootstrap
+mean_boot <- mean(boot_medias)
+sd_boot   <- sd(boot_medias)
+
+# Valor crítico z
+z_critico <- qnorm(1 - alpha_boot / 2)
+
+li_norm <- mean_boot - z_critico * sd_boot
+ls_norm <- mean_boot + z_critico * sd_boot
+
+tabla_norm_boot <- data.frame(
+  Metodo   = "Normal bootstrap",
+  B        = B,
+  LI       = round(li_norm, 4),
+  Media    = round(mean_boot, 4),
+  LS       = round(ls_norm, 4),
+  Amplitud = round(ls_norm - li_norm, 4)
+)
+
+knitr::kable(tabla_norm_boot,
+  caption   = "Intervalo de confianza normal bootstrap al 95%",
+  col.names = c("Método", "B", "Límite inferior",
+                "Media bootstrap", "Límite superior", "Amplitud"),
+  align     = c("l","c","c","c","c","c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+```{r p4-comparacion}
+tabla_comp <- data.frame(
+  Metodo   = c("t de Student", "Percentil bootstrap", "Normal bootstrap"),
+  LI       = c(round(li_t, 4), round(li_perc, 4), round(li_norm, 4)),
+  Media    = c(round(media, 4), round(mean(boot_medias), 4), round(mean_boot, 4)),
+  LS       = c(round(ls_t, 4), round(ls_perc, 4), round(ls_norm, 4)),
+  Amplitud = c(round(ls_t - li_t, 4),
+               round(ls_perc - li_perc, 4),
+               round(ls_norm - li_norm, 4))
+)
+
+knitr::kable(tabla_comp,
+  caption   = "Comparación de intervalos de confianza al 95%",
+  col.names = c("Método", "Límite inferior", "Media",
+                "Límite superior", "Amplitud"),
+  align     = c("l","c","c","c","c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+El intervalo normal bootstrap al 95% es $[5.8211, 6.0087]$ kWh/L,
+con una amplitud de $0.188$ kWh/L, prácticamente idéntico al percentil,
+lo que confirma la simetría de la distribución bootstrap.
+
+### Comparación e interpretación
+
+¿Los tres intervalos son similares o presentan diferencias significativas?
+
+Los tres intervalos son muy similares entre sí. Los límites inferiores oscilan
+entre $5.813$ y $5.821$ kWh/L, y los superiores entre $6.009$ y $6.022$
+kWh/L. Las amplitudes son prácticamente iguales (entre $0.188$ y $0.209$
+kWh/L), lo que indica que los tres métodos producen estimaciones consistentes.
+Esto es esperable dado que la muestra cumple el supuesto de normalidad, 
+condición bajo la cual los métodos paramétrico y bootstrap convergen hacia
+resultados similares.
+
+```{r p4-grafico-ic, fig.cap="Comparación visual de los intervalos de confianza al 95%"}
+df_ic <- data.frame(
+  Metodo = factor(c("t de Student", "Percentil bootstrap", "Normal bootstrap"),
+                  levels = c("t de Student", "Percentil bootstrap", "Normal bootstrap")),
+  Media  = c(round(media, 4), round(mean(boot_medias), 4), round(mean_boot, 4)),
+  LI     = c(round(li_t, 4), round(li_perc, 4), round(li_norm, 4)),
+  LS     = c(round(ls_t, 4), round(ls_perc, 4), round(ls_norm, 4))
+)
+
+ggplot(df_ic, aes(x = Metodo, y = Media, color = Metodo)) +
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = LI, ymax = LS), width = 0.2, linewidth = 1.2) +
+  geom_hline(yintercept = media, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  annotate("text", x = 2.7, y = media + 0.006,
+           label = paste0("\u03bc = ", round(media, 4)),
+           color = "#9b2226", size = 4, fontface = "bold") +
+  scale_color_manual(values = c("#2d6a4f", "#e07b39", "#2c7bb6")) +
+  labs(
+    x     = "Método",
+    y     = "Eficiencia energética (kWh/L)",
+    color = "Método"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```

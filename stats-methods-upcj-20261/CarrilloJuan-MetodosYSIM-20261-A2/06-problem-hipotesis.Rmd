@@ -1,0 +1,554 @@
+---
+title: "Problema 6: Prueba de hipótesis e intervalo de confianza"
+subtitle: "Simulación, Estimación e Inferencia Estadística · 2026-A"
+author: "Integrantes: Juan Alejandro Carrillo Jaimes & David Burgoa"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = 'center',
+  out.width = '85%',
+  encoding  = "UTF-8"
+) 
+options(scipen = 999)
+
+# Estilo para las tablas kable
+library(kableExtra)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+```
+# Descripción del Problema: Prueba de hipótesis e intervalo de confianza
+```{r banner-p6, echo=FALSE, fig.cap="Segmentación de clientes — Análisis inferencial"}
+knitr::include_graphics("assets/problem-6-hipotesis.jpg")
+```
+Este problema se desarrolla con base en el informe estadístico elaborado en la
+Actividad 1, el cual puede consultarse en el siguiente enlace:
+
+[Informe Estadístico — Actividad 1](https://github.com/Doc-UP-AlejandroJaimes/mds-javeriana/blob/develop/stats-methods-upcj-20261/CarrilloJuan-MetodosYSIM-20261-A/informe-actividad1.html)
+
+Se formulan tres preguntas de investigación relevantes al contexto de
+segmentación de clientes, y para cada una se aplican pruebas de hipótesis
+e intervalos de confianza, verificando el cumplimiento de los supuestos
+necesarios.
+
+## Pregunta 1 — ¿El ingreso promedio de los clientes que aceptaron la campaña es mayor que el de quienes no la aceptaron?
+
+Las hipótesis planteadas son:
+
+- $H_0$: El ingreso promedio de los clientes que aceptaron la campaña es
+  igual al de quienes no la aceptaron: $\mu_1 = \mu_0$
+- $H_1$: El ingreso promedio de los clientes que aceptaron la campaña es
+  mayor: $\mu_1 > \mu_0$
+
+### Verificación de supuestos
+
+Dado que $n_1 = 325$ y $n_0 = 1827$, ambos grupos son suficientemente
+grandes para que el TLC garantice la normalidad de las medias muestrales.
+No obstante, se aplica la prueba de Kolmogorov-Smirnov para verificarlo
+formalmente. Adicionalmente, se verifica la igualdad de varianzas con la
+prueba F.
+`````{r p6-p1-datos}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+df <- read_excel("segmentation-customers.xlsx", sheet = "data")
+
+grupo1 <- df |> filter(Response == 1) |> pull(Income) |> na.omit()
+grupo0 <- df |> filter(Response == 0) |> pull(Income) |> na.omit()
+
+ks1      <- ks.test(grupo1, "pnorm", mean(grupo1), sd(grupo1))
+ks0      <- ks.test(grupo0, "pnorm", mean(grupo0), sd(grupo0))
+var_test <- var.test(grupo1, grupo0)
+`````
+
+`````{r p6-p1-supuestos-tabla}
+tabla_sup <- data.frame(
+  Grupo   = c("Response = 1", "Response = 0"),
+  n       = c(length(grupo1), length(grupo0)),
+  Media   = c(round(mean(grupo1), 2), round(mean(grupo0), 2)),
+  SD      = c(round(sd(grupo1), 2), round(sd(grupo0), 2)),
+  KS_p    = c(round(ks1$p.value, 4), round(ks0$p.value, 4)),
+  KS_conc = c("Rechaza normalidad", "Rechaza normalidad")
+)
+
+knitr::kable(tabla_sup,
+  caption   = "Estadísticos descriptivos y prueba KS por grupo",
+  col.names = c("Grupo", "n", "Media", "SD", "p-valor KS", "Conclusión"),
+  align     = c("l","c","c","c","c","l"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+`````
+
+Aunque la prueba KS rechaza normalidad estricta, dado el tamaño muestral
+grande el TLC garantiza que la prueba $t$ de Welch es válida. La prueba F
+confirma varianzas desiguales ($F = 1.3642$, $p = 0.0001$), por lo que
+se aplica la prueba de Welch con varianzas distintas.
+
+````{r p6-p1-grafico, fig.cap="Distribución del ingreso anual según respuesta a la campaña"}
+df_plot_p6 <- df |>
+  filter(!is.na(Income)) |>
+  mutate(Grupo = ifelse(Response == 1,
+                        "Aceptó (Response=1)",
+                        "No aceptó (Response=0)"))
+
+ggplot(df_plot_p6, aes(x = Grupo, y = Income, fill = Grupo)) +
+  geom_boxplot(alpha = 0.8, outlier.color = "#9b2226",
+               outlier.size = 1.5) +
+  stat_summary(fun = mean, geom = "point",
+               shape = 18, size = 4, color = "#9b2226") +
+  stat_summary(fun = mean, geom = "text",
+               aes(label = paste0("\u03bc = ",
+                   scales::comma(round(after_stat(y), 0)))),
+               vjust = -2.5, size = 3.5,
+               color = "#9b2226", fontface = "bold") +
+  scale_fill_manual(values = c("#2c7bb6", "#e07b39")) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(x = "Grupo", y = "Ingreso anual (USD)", fill = "Grupo") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+````
+
+### Prueba de hipótesis e intervalo de confianza
+
+El estadístico de prueba para la diferencia de medias con varianzas
+desiguales (Welch) es:
+
+$$t = \frac{\bar{x}_1 - \bar{x}_0}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_0^2}{n_0}}}$$
+
+Sustituyendo:
+
+$$t = \frac{601{,}058.6 - 501{,}500}{\sqrt{\frac{231{,}982.4^2}{325} + \frac{198{,}617.3^2}{1827}}} = \frac{99{,}558.6}{\sqrt{165{,}584{,}167 + 21{,}589{,}432}} = \frac{99{,}558.6}{13{,}685.7} = 7.277$$
+
+Con $\alpha = 0.05$ y prueba unilateral derecha, el valor crítico es
+$t_{\alpha, gl} \approx 1.645$. Como $t = 7.277 > 1.645$, se rechaza $H_0$.
+
+El nivel de significancia $\alpha = 0.05$ se justifica porque en el
+contexto de segmentación de clientes, un nivel más estricto ($\alpha = 0.01$)
+requeriría muestras mayores sin aportar beneficio práctico relevante,
+mientras que $\alpha = 0.10$ sería demasiado permisivo para una decisión
+de negocio.
+
+
+```{r p6-p1-prueba}
+t_res <- t.test(grupo1, grupo0,
+                alternative = "greater",
+                var.equal   = FALSE,
+                conf.level  = 0.95)
+
+tabla_t <- data.frame(
+  Estadistico = round(t_res$statistic, 4),
+  gl          = round(t_res$parameter, 2),
+  p_valor     = round(t_res$p.value, 6),
+  Alpha       = 0.05,
+  LI_IC       = round(t_res$conf.int[1], 2),
+  LS_IC       = round(t_res$conf.int[2], 2),
+  Conclusion  = ifelse(t_res$p.value < 0.05,
+                       "Se rechaza H\u2080",
+                       "No se rechaza H\u2080")
+)
+rownames(tabla_t) <- NULL
+
+knitr::kable(tabla_t,
+  caption   = "Prueba t de Welch — diferencia de ingresos por grupo",
+  col.names = c("t", "g.l.", "p-valor", "\u03b1",
+                "LI (IC 95%)", "LS (IC 95%)", "Conclusión"),
+  align     = c("c","c","c","c","c","c","l"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+Con un estadístico $t = 7.277$, $gl = 412.76$ y $p < 0.0001$, se rechaza
+$H_0$. Existe evidencia estadística suficiente para concluir que el ingreso
+promedio de los clientes que aceptaron la campaña (\$601,059) es
+significativamente mayor que el de quienes no la aceptaron (\$501,500),
+con una confianza del 95%. El intervalo de confianza indica que la
+diferencia mínima esperada es de \$77,004, lo que sugiere que el ingreso
+es un factor relevante en la propensión a aceptar la oferta.
+
+## Pregunta 2 — ¿Existe una diferencia significativa en el gasto total promedio entre clientes que aceptaron y rechazaron la campaña?
+
+Las hipótesis planteadas son:
+
+- $H_0$: El gasto total promedio es igual en ambos grupos: $\mu_1 = \mu_0$
+- $H_1$: El gasto total promedio difiere entre grupos: $\mu_1 \neq \mu_0$
+
+### Prueba de hipótesis e intervalo de confianza
+
+Aplicando la misma fórmula de Welch para prueba bilateral:
+
+$$t = \frac{\bar{x}_1 - \bar{x}_0}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_0^2}{n_0}}} = \frac{927.42 - 499.07}{\sqrt{\frac{700.03^2}{334} + \frac{525.51^2}{1886}}} = \frac{428.35}{\sqrt{1{,}468{,}126 + 146{,}512}} = \frac{428.35}{40.18} = 10.664$$
+
+Con $\alpha = 0.05$ y prueba bilateral, el valor crítico es
+$t_{\alpha/2, gl} \approx 1.966$. Como $|t| = 10.664 > 1.966$, se rechaza $H_0$.
+
+El intervalo de confianza al 95% para $\mu_1 - \mu_0$ es:
+
+$$(\bar{x}_1 - \bar{x}_0) \pm t_{\alpha/2} \cdot \sqrt{\frac{s_1^2}{n_1} + \frac{s_0^2}{n_0}} = 428.35 \pm 1.966 \times 40.18 = [349.39,\ 507.33]$$
+
+
+### Verificación de supuestos
+```{r p6-p2-datos}
+grupo1_mnt <- df |> filter(Response == 1) |> pull(MntTotal) |> na.omit()
+grupo0_mnt <- df |> filter(Response == 0) |> pull(MntTotal) |> na.omit()
+
+ks1_mnt      <- ks.test(grupo1_mnt, "pnorm", mean(grupo1_mnt), sd(grupo1_mnt))
+ks0_mnt      <- ks.test(grupo0_mnt, "pnorm", mean(grupo0_mnt), sd(grupo0_mnt))
+var_test_mnt <- var.test(grupo1_mnt, grupo0_mnt)
+```
+
+```{r p6-p2-supuestos-tabla}
+tabla_sup2 <- data.frame(
+  Grupo   = c("Response = 1", "Response = 0"),
+  n       = c(length(grupo1_mnt), length(grupo0_mnt)),
+  Media   = c(round(mean(grupo1_mnt), 2), round(mean(grupo0_mnt), 2)),
+  SD      = c(round(sd(grupo1_mnt), 2), round(sd(grupo0_mnt), 2)),
+  KS_p    = c(round(ks1_mnt$p.value, 4), round(ks0_mnt$p.value, 4)),
+  KS_conc = c("Rechaza normalidad", "Rechaza normalidad")
+)
+
+knitr::kable(tabla_sup2,
+  caption   = "Estadísticos descriptivos y prueba KS — gasto total",
+  col.names = c("Grupo", "n", "Media", "SD", "p-valor KS", "Conclusión"),
+  align     = c("l","c","c","c","c","l"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+```{r p6-p2-grafico, fig.cap="Distribución del gasto total según respuesta a la campaña"}
+df_plot_p6b <- df |>
+  filter(!is.na(MntTotal)) |>
+  mutate(Grupo = ifelse(Response == 1,
+                        "Aceptó (Response=1)",
+                        "No aceptó (Response=0)"))
+
+ggplot(df_plot_p6b, aes(x = Grupo, y = MntTotal, fill = Grupo)) +
+  geom_boxplot(alpha = 0.8, outlier.color = "#9b2226",
+               outlier.size = 1.5) +
+  stat_summary(fun = mean, geom = "point",
+               shape = 18, size = 4, color = "#9b2226") +
+  stat_summary(fun = mean, geom = "text",
+               aes(label = paste0("\u03bc = ",
+                   scales::comma(round(after_stat(y), 0)))),
+               vjust = -2.5, size = 3.5,
+               color = "#9b2226", fontface = "bold") +
+  scale_fill_manual(values = c("#2c7bb6", "#e07b39")) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(x = "Grupo", y = "Gasto total (USD)", fill = "Grupo") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
+```{r p6-p2-prueba}
+t_res2 <- t.test(grupo1_mnt, grupo0_mnt,
+                 alternative = "two.sided",
+                 var.equal   = FALSE,
+                 conf.level  = 0.95)
+
+tabla_t2 <- data.frame(
+  Estadistico = round(t_res2$statistic, 4),
+  gl          = round(t_res2$parameter, 2),
+  p_valor     = round(t_res2$p.value, 6),
+  Alpha       = 0.05,
+  LI_IC       = round(t_res2$conf.int[1], 2),
+  LS_IC       = round(t_res2$conf.int[2], 2),
+  Conclusion  = ifelse(t_res2$p.value < 0.05,
+                       "Se rechaza H\u2080",
+                       "No se rechaza H\u2080")
+)
+rownames(tabla_t2) <- NULL
+
+knitr::kable(tabla_t2,
+  caption   = "Prueba t de Welch — diferencia de gasto total por grupo",
+  col.names = c("t", "g.l.", "p-valor", "\u03b1",
+                "LI (IC 95%)", "LS (IC 95%)", "Conclusión"),
+  align     = c("c","c","c","c","c","c","l"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+Con $t = 10.6636$, $gl = 402.08$ y $p < 0.0001$, se rechaza $H_0$.
+Existe evidencia estadística suficiente para concluir que el gasto total
+promedio de los clientes que aceptaron la campaña (\$927) es
+significativamente mayor que el de quienes no la aceptaron (\$499), con
+una confianza del 95%. El intervalo de confianza indica que la diferencia
+real entre los grupos se encuentra entre \$349 y \$507, lo que sugiere
+que el comportamiento de gasto es un factor fuertemente asociado a la
+aceptación de la oferta.
+
+## Pregunta 3 — ¿La proporción de clientes con posgrado que aceptaron la campaña es mayor que la de clientes sin posgrado?
+
+Las hipótesis planteadas son:
+
+- $H_0$: La proporción de aceptación es igual en ambos grupos:
+  $p_{posgrado} = p_{sin\ posgrado}$
+- $H_1$: La proporción de aceptación es mayor en clientes con posgrado:
+  $p_{posgrado} > p_{sin\ posgrado}$
+  
+### Prueba de hipótesis e intervalo de confianza
+
+El estadístico de prueba para la diferencia de proporciones es:
+
+$$z = \frac{\hat{p}_1 - \hat{p}_2}{\sqrt{\hat{p}(1-\hat{p})\left(\frac{1}{n_1} + \frac{1}{n_2}\right)}}$$
+
+donde $\hat{p}$ es la proporción combinada:
+
+$$\hat{p} = \frac{x_1 + x_2}{n_1 + n_2} = \frac{158 + 176}{844 + 1376} = \frac{334}{2220} = 0.1505$$
+
+Sustituyendo:
+
+$$z = \frac{0.1872 - 0.1279}{\sqrt{0.1505(1-0.1505)\left(\frac{1}{844} + \frac{1}{1376}\right)}} = \frac{0.0593}{0.01573} = 3.770$$
+
+Con $\alpha = 0.05$ y prueba unilateral derecha, el valor crítico es
+$z_{\alpha} = 1.645$. Como $z = 3.770 > 1.645$, se rechaza $H_0$.
+
+El intervalo de confianza al 95% para la diferencia de proporciones
+$p_{posgrado} - p_{sin\ posgrado}$ es:
+
+$$(\hat{p}_1 - \hat{p}_2) \pm z_{\alpha/2}\sqrt{\frac{\hat{p}_1(1-\hat{p}_1)}{n_1} + \frac{\hat{p}_2(1-\hat{p}_2)}{n_2}}$$
+
+$$0.0593 \pm 1.96 \times \sqrt{\frac{0.1872 \times 0.8128}{844} + \frac{0.1279 \times 0.8721}{1376}} = [0.0282,\ 0.0904]$$
+
+El nivel de significancia $\alpha = 0.05$ se justifica porque ofrece un
+equilibrio adecuado entre el riesgo de error tipo I y tipo II en un
+contexto de segmentación de clientes, donde detectar diferencias reales
+es importante pero sin ser excesivamente permisivos.
+
+### Verificación de supuestos
+
+Para aplicar la prueba de proporciones se debe verificar que
+$n\hat{p} \geq 5$ y $n(1-\hat{p}) \geq 5$ en ambos grupos.
+
+```{r p6-p3-datos}
+df_prop <- df |>
+  mutate(
+    posgrado = ifelse(education_Master == 1 | education_PhD == 1, 1, 0)
+  )
+
+n_pos  <- sum(df_prop$posgrado == 1, na.rm = TRUE)
+n_npos <- sum(df_prop$posgrado == 0, na.rm = TRUE)
+x_pos  <- sum(df_prop$posgrado == 1 & df_prop$Response == 1, na.rm = TRUE)
+x_npos <- sum(df_prop$posgrado == 0 & df_prop$Response == 1, na.rm = TRUE)
+
+p_pos  <- x_pos  / n_pos
+p_npos <- x_npos / n_npos
+
+tabla_sup3 <- data.frame(
+  Grupo      = c("Con posgrado", "Sin posgrado"),
+  n          = c(n_pos, n_npos),
+  Aceptaron  = c(x_pos, x_npos),
+  Proporcion = c(round(p_pos, 4), round(p_npos, 4)),
+  np         = c(round(n_pos * p_pos, 1), round(n_npos * p_npos, 1)),
+  n1_p       = c(round(n_pos * (1 - p_pos), 1),
+                 round(n_npos * (1 - p_npos), 1)),
+  Supuesto   = c("Cumple", "Cumple")
+)
+
+knitr::kable(tabla_sup3,
+  caption   = "Verificación de supuestos — prueba de proporciones",
+  col.names = c("Grupo", "n", "Aceptaron", "Proporción ($\\hat{p}$)",
+                "$n\\hat{p}$", "$n(1-\\hat{p})$", "Supuesto"),
+  align     = c("l","c","c","c","c","c","c"),
+  format    = "html",
+  escape    = FALSE
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+
+```{r p6-p3-grafico, fig.cap="Proporción de aceptación de la campaña según nivel educativo"}
+df_bar <- data.frame(
+  Grupo      = c("Con posgrado", "Sin posgrado"),
+  Proporcion = c(round(p_pos, 4), round(p_npos, 4)),
+  n          = c(n_pos, n_npos)
+)
+
+ggplot(df_bar, aes(x = Grupo, y = Proporcion, fill = Grupo)) +
+  geom_col(alpha = 0.85, width = 0.5) +
+  geom_text(aes(label = paste0(round(Proporcion * 100, 1), "%")),
+            vjust = -0.8, size = 4.5, fontface = "bold") +
+  scale_fill_manual(values = c("#2c7bb6", "#e07b39")) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 0.25)) +
+  labs(
+    x    = "Grupo",
+    y    = "Proporción de aceptación",
+    fill = "Grupo"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
+```{r p6-p3-prueba}
+prop_res <- prop.test(
+  x           = c(x_pos, x_npos),
+  n           = c(n_pos, n_npos),
+  alternative = "greater",
+  correct     = FALSE,
+  conf.level  = 0.95
+)
+
+tabla_prop <- data.frame(
+  Estadistico = round(prop_res$statistic, 4),
+  p_valor     = round(prop_res$p.value, 6),
+  Alpha       = 0.05,
+  LI_IC       = round(prop_res$conf.int[1], 4),
+  LS_IC       = ifelse(is.infinite(prop_res$conf.int[2]),
+                       "Inf", round(prop_res$conf.int[2], 4)),
+  Conclusion  = ifelse(prop_res$p.value < 0.05,
+                       "Se rechaza H\u2080",
+                       "No se rechaza H\u2080")
+)
+rownames(tabla_prop) <- NULL
+
+knitr::kable(tabla_prop,
+  caption   = "Prueba de proporciones — aceptación por nivel educativo",
+  col.names = c("\u03c7²", "p-valor", "\u03b1",
+                "LI (IC 95%)", "LS (IC 95%)", "Conclusión"),
+  align     = c("c","c","c","c","c","l"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+Con $\chi^2 = 14.3909$ y $p = 0.000074 < \alpha = 0.05$, se rechaza $H_0$.
+Existe evidencia estadística suficiente para concluir que la proporción de
+aceptación de la campaña es significativamente mayor en clientes con
+posgrado (18.7%) que en clientes sin posgrado (12.8%), con una confianza
+del 95%. El intervalo de confianza para la diferencia de proporciones
+indica que la ventaja mínima esperada del grupo con posgrado es de 3.27
+puntos porcentuales. Esto sugiere que el nivel educativo es un factor
+relevante en la propensión a aceptar la oferta de la campaña.
+
+### Síntesis del Problema 6
+
+```{r p6-sintesis, fig.cap="Síntesis de hallazgos inferenciales — Problema 6"}
+library(patchwork)
+
+# Panel 1: Ingresos
+df_ing <- data.frame(
+  Grupo  = c("Aceptó", "No aceptó"),
+  Media  = c(601059, 501500),
+  SE     = c(231982.4/sqrt(325), 198617.3/sqrt(1827))
+)
+
+p1 <- ggplot(df_ing, aes(x = Grupo, y = Media, fill = Grupo)) +
+  geom_col(alpha = 0.85, width = 0.5) +
+  geom_errorbar(aes(ymin = Media - SE, ymax = Media + SE),
+                width = 0.15, linewidth = 0.8) +
+  geom_text(aes(label = scales::dollar(round(Media, 0))),
+            vjust = -1.5, size = 3.5, fontface = "bold") +
+  scale_fill_manual(values = c("#2c7bb6", "#e07b39")) +
+  scale_y_continuous(labels = scales::dollar,
+                     limits = c(0, 750000)) +
+  labs(title = "Ingreso anual promedio",
+       x = NULL, y = "USD") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", hjust = 0.5))
+
+# Panel 2: Gasto total
+df_gasto <- data.frame(
+  Grupo = c("Aceptó", "No aceptó"),
+  Media = c(927.42, 499.07),
+  SE    = c(700.03/sqrt(334), 525.51/sqrt(1886))
+)
+
+p2 <- ggplot(df_gasto, aes(x = Grupo, y = Media, fill = Grupo)) +
+  geom_col(alpha = 0.85, width = 0.5) +
+  geom_errorbar(aes(ymin = Media - SE, ymax = Media + SE),
+                width = 0.15, linewidth = 0.8) +
+  geom_text(aes(label = scales::dollar(round(Media, 0))),
+            vjust = -1.5, size = 3.5, fontface = "bold") +
+  scale_fill_manual(values = c("#2c7bb6", "#e07b39")) +
+  scale_y_continuous(labels = scales::dollar,
+                     limits = c(0, 1200)) +
+  labs(title = "Gasto total promedio",
+       x = NULL, y = "USD") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", hjust = 0.5))
+
+# Panel 3: Proporciones
+df_prop_plot <- data.frame(
+  Grupo      = c("Con posgrado", "Sin posgrado"),
+  Proporcion = c(0.1872, 0.1279)
+)
+
+p3 <- ggplot(df_prop_plot, aes(x = Grupo, y = Proporcion, fill = Grupo)) +
+  geom_col(alpha = 0.85, width = 0.5) +
+  geom_text(aes(label = paste0(round(Proporcion * 100, 1), "%")),
+            vjust = -0.8, size = 3.5, fontface = "bold") +
+  scale_fill_manual(values = c("#2d6a4f", "#9b2226")) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 0.25)) +
+  labs(title = "Tasa de aceptación por nivel educativo",
+       x = NULL, y = "Proporción") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", hjust = 0.5))
+
+p1 <- p1 + labs(title = "Ingreso anual")
+p2 <- p2 + labs(title = "Gasto total")
+p3 <- p3 + labs(title = "Tasa de aceptación\npor nivel educativo")
+
+(p1 | p2 | p3) +
+  plot_layout(widths = c(1, 1, 1)) &
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 11))
+```
+La Figura \@ref(fig:p6-sintesis) resume los tres hallazgos principales:
+los clientes que aceptaron la campaña presentan un ingreso anual promedio
+\$99,559 mayor, gastan casi el doble en productos (\$927 vs \$499), y
+tienen una tasa de aceptación 5.9 puntos porcentuales superior cuando
+cuentan con posgrado. Las barras de error en los dos primeros paneles
+confirman que las diferencias observadas no se deben al azar.

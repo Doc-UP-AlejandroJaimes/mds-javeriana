@@ -1,0 +1,426 @@
+---
+title: "Problema 3: Teorema del Límite Central"
+subtitle: "Simulación, Estimación e Inferencia Estadística · 2026-A"
+author: "Integrantes: Juan Alejandro Carrillo Jaimes & David Burgoa"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = 'center',
+  out.width = '85%',
+  encoding  = "UTF-8"
+)
+options(scipen = 999)
+
+# Estilo para las tablas kable
+library(kableExtra)
+```
+
+# Descripción del Problema
+```{r banner-p3, echo=FALSE, fig.cap="Planta de fabricación de componentes electrónicos"}
+knitr::include_graphics("assets/problem-3-tcl.jpg")
+```
+
+En una planta de fabricación de componentes electrónicos, se modela el tiempo
+(en meses) de funcionamiento continuo de una máquina antes de necesitar
+mantenimiento mediante una distribución Exponencial. El análisis ha determinado
+que el tiempo hasta el primer mantenimiento sigue una distribución Exponencial
+con parámetro $\lambda = 0.16$.
+
+## Media y varianza de la población
+
+Para una variable aleatoria $X \sim \text{Exp}(\lambda)$, la media y varianza
+poblacionales se obtienen directamente de las fórmulas teóricas de la
+distribución:
+
+$$\mu = \frac{1}{\lambda} \qquad \sigma^2 = \frac{1}{\lambda^2}$$
+```{r p3-punto1}
+lambda    <- 0.16
+mu_pob    <- 1 / lambda
+var_pob   <- 1 / lambda^2
+sigma_pob <- sqrt(var_pob)
+cv_pob    <- sigma_pob / mu_pob * 100
+
+cat("Media (μ)             :", mu_pob,    "meses\n")
+cat("Varianza (σ²)         :", var_pob,   "meses²\n")
+cat("Desv. estándar (σ)    :", sigma_pob, "meses\n")
+cat("Coef. de variación (%):", cv_pob,    "%\n")
+```
+Con $\lambda = 0.16$, se obtiene una media de **6.25 meses** y una varianza de
+**39.06 meses²**. Esto indica que, en promedio, una máquina funciona 6.25 meses
+antes de necesitar mantenimiento, pero con una dispersión muy alta (σ = 6.25
+meses, CV = 100%), lo que es característico de la distribución exponencial y
+refleja que los tiempos de falla son muy variables entre máquinas.
+
+## Gráfico de la curva de densidad
+
+```{r p3-punto2, fig.cap="Función de densidad — Exp(λ = 0.16)"}
+library(ggplot2)
+
+x_vals <- seq(0, 50, by = 0.1)
+df_dens <- data.frame(
+  x  = x_vals,
+  fx = dexp(x_vals, rate = lambda)
+)
+
+ggplot(df_dens, aes(x = x, y = fx)) +
+  geom_line(color = "#2c7bb6", linewidth = 1.2) +
+  geom_area(alpha = 0.15, fill = "#2c7bb6") +
+  geom_vline(xintercept = mu_pob, linetype = "dashed",
+             color = "#d7191c", linewidth = 0.9) +
+  annotate("text", x = mu_pob + 3, y = 0.09,
+           label = paste0("μ = ", mu_pob, " meses"),
+           color = "#d7191c", size = 4) +
+  labs(
+    x = "Tiempo hasta mantenimiento (meses)",
+    y = "Densidad f(x)"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+La Figura 1 muestra una curva decreciente que inicia en $f(0) = \lambda = 0.16$
+y se aproxima a cero a medida que aumenta el tiempo. Esto indica que las fallas
+tempranas son más probables que las tardías. La línea roja marca la media
+poblacional ($\mu = 6.25$ meses), y se observa que la mayor parte del área
+queda a la izquierda de ese valor, lo que confirma la asimetría positiva de
+la distribución.
+
+Un $\lambda$ más grande haría la curva más empinada (fallas más frecuentes y
+tempranas), mientras que un $\lambda$ más pequeño la aplanaría (máquinas más
+duraderas). En el contexto del mantenimiento predictivo, este modelo sugiere
+que la probabilidad de falla es mayor en los primeros meses de operación y
+disminuye con el tiempo, aunque nunca desaparece completamente.
+
+## Comparación de parámetros, estimadores y estimaciones
+
+Se toman 10 muestras aleatorias de tamaño $n = 200$ de la población Exponencial
+con parámetro $\lambda = 0.16$, usando la función `rexp(n, rate = lambda)` de R.
+Se establece la semilla `set.seed(123)` para garantizar la reproducibilidad de
+los resultados. Para cada muestra se calcula la media y varianza muestral, y se
+comparan con los valores poblacionales $\mu = 6.25$ y $\sigma^2 = 39.0625$.
+
+```{r p3-punto3}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+n        <- 200
+m        <- 10
+muestras <- replicate(m, rexp(n, rate = lambda))
+
+medias    <- apply(muestras, 2, mean)
+varianzas <- apply(muestras, 2, var)
+
+tabla_p3 <- data.frame(
+  Muestra           = 1:m,
+  Media_muestral    = round(medias, 4),
+  Varianza_muestral = round(varianzas, 4),
+  Error_media       = round(abs(medias - mu_pob), 4),
+  Error_varianza    = round(abs(varianzas - var_pob), 4)
+)
+
+knitr::kable(tabla_p3,
+  caption   = "Medias y varianzas muestrales vs. valores poblacionales",
+  col.names = c("Muestra", "Media (x̄)", "Varianza (s²)", "|x̄ − μ|", "|s² − σ²|"),
+  align     = c("c","c","c","c","c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  ) |>
+  kableExtra::column_spec(1, width = "5em") |>
+  kableExtra::column_spec(2:5, width = "8em")
+```
+
+- **Parámetros:** valores poblacionales reales, fijos: $\mu = 6.25$ meses
+  y $\sigma^2 = 39.0625$ meses². Son constantes desconocidas en la práctica.
+
+- **Estimadores:** fórmulas usadas para aproximar los parámetros:
+  $$\bar{x} = \frac{1}{n}\sum_{i=1}^n x_i \quad \text{(estima } \mu\text{)}
+  \qquad s^2 = \frac{1}{n-1}\sum_{i=1}^n (x_i - \bar{x})^2
+  \quad \text{(estima } \sigma^2\text{)}$$
+
+- **Estimaciones:** los valores concretos de la Tabla
+  \@ref(tab:p3-punto3). Por ejemplo, la muestra 1 produce $\bar{x} = 6.2952$
+  y $s^2 = 36.4925$, con errores $|\bar{x} - \mu| = 0.0452$ y
+  $|s^2 - \sigma^2| = 2.57$ respectivamente.
+
+```{r p3-histogramas, fig.cap="Histogramas de las 10 muestras aleatorias — Exp(λ = 0.16), n = 200"}
+library(ggplot2)
+library(gridExtra)
+
+plots <- lapply(1:m, function(i) {
+  df <- data.frame(x = muestras[, i])
+  ggplot(df, aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+                   bins = 20,
+                   fill = "#2c7bb6",
+                   color = "white",
+                   alpha = 0.8) +
+    geom_vline(xintercept = medias[i], color = "#d7191c",
+               linetype = "dashed", linewidth = 0.8) +
+    geom_vline(xintercept = mu_pob, color = "#1a9641",
+               linetype = "solid", linewidth = 0.8) +
+    labs(
+      title = paste0("Muestra ", i),
+      x     = "Tiempo (meses)",
+      y     = "Densidad"
+    ) +
+    theme_minimal(base_size = 9)
+})
+
+gridExtra::grid.arrange(grobs = plots, ncol = 5)
+```
+La Figura \@ref(fig:p3-histogramas) muestra los histogramas de las 10 muestras.
+En todas se observa la forma característica de la distribución exponencial:
+asimétrica positiva, con alta concentración de valores cercanos a cero y cola
+larga hacia la derecha.
+
+La línea verde (μ = 6.25 meses) y la línea roja punteada (x̄ muestral) se
+encuentran muy cercanas en la mayoría de las muestras, lo que confirma que la
+media muestral es un **buen estimador** de la media poblacional. Las diferencias más
+notorias se observan en las muestras 4 y 7, donde x̄ se aleja un poco más de μ,
+lo que es esperable debido a la parte de azar, dado a la semila (123).
+
+## Aplicación del Teorema del Límite Central para n = 200
+
+Se generan 100 muestras de tamaño $n = 200$ de la población Exponencial con
+parámetro $\lambda = 0.16$. Para cada muestra se calcula la media muestral
+$\bar{x}$, y se analiza el comportamiento de las 100 medias resultantes.
+
+El **Teorema del Límite Central** establece que para muestras de tamaño
+$n$ suficientemente grande, la distribución de la media muestral
+$\bar{X}$ se aproxima a una distribución normal:
+
+$$\bar{X} \sim N\left(\mu,\; \frac{\sigma^2}{n}\right)$$
+
+independientemente de la distribución de la población original. Para
+$n = 200$ y $\lambda = 0.16$, se espera:
+
+$$\bar{X} \sim N\left(6.25,\; \frac{39.0625}{200}\right) = N(6.25,\; 0.1953)$$
+
+```{r p3-punto4}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+n_tlc <- 200
+m_tlc <- 100
+
+medias_tlc <- replicate(m_tlc, mean(rexp(n_tlc, rate = lambda)))
+
+prom_medias <- mean(medias_tlc)
+var_medias  <- var(medias_tlc)
+mu_esp      <- mu_pob
+var_esp     <- var_pob / n_tlc
+
+tabla_tlc <- data.frame(
+  Estadistico = c("Media de las medias muestrales",
+                  "Varianza de las medias muestrales",
+                  "Media teórica esperada (μ)",
+                  "Varianza teórica esperada (σ²/n)"),
+  Simulado  = c(round(prom_medias, 4), round(var_medias, 4), "—", "—"),
+  Teorico   = c("—", "—", round(mu_esp, 4), round(var_esp, 4))
+)
+
+knitr::kable(tabla_tlc,
+  caption   = "Comparación entre valores simulados y teóricos — TLC (n = 200)",
+  col.names = c("Estadístico", "Valor simulado", "Valor teórico"),
+  align     = c("l", "c", "c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+La Tabla \@ref(tab:p3-punto4) confirma la convergencia: el promedio
+simulado de las 100 medias ($6.2717$) es muy cercano al valor teórico
+($\mu = 6.25$), con un error de apenas $0.0217$ meses. La varianza
+simulada ($0.1528$) se aproxima a la varianza teórica ($\sigma^2/n =
+0.1953$), con una diferencia de $0.0425$, atribuible al azar del
+muestreo con solo 100 réplicas.
+
+```{r p3-punto4-hist, fig.cap="Histograma de las 100 medias muestrales — TLC (n = 200)"}
+df_medias <- data.frame(media = medias_tlc)
+
+ggplot(df_medias, aes(x = media)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 20,
+                 fill = "#2c7bb6",
+                 color = "white",
+                 alpha = 0.8) +
+  geom_density(color = "#d7191c", linewidth = 1) +
+  geom_vline(xintercept = mu_pob, linetype = "dashed",
+             color = "#1a9641", linewidth = 1) +
+  annotate("text", x = mu_pob + 0.35, y = 1.15,
+           label = paste0("\u03bc = ", mu_pob),
+           color = "#1a9641", size = 4) +
+  labs(
+    x = "Media muestral (meses)",
+    y = "Densidad"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+```{r p3-punto4-test}
+test_norm <- shapiro.test(medias_tlc)
+
+tabla_test <- data.frame(
+  Prueba     = "Shapiro-Wilk",
+  Estadistico = round(test_norm$statistic, 4),
+  p_valor    = round(test_norm$p.value, 4),
+  Conclusion = ifelse(test_norm$p.value > 0.05,
+                      "No se rechaza H₀ — normalidad",
+                      "Se rechaza H₀ — no normalidad")
+)
+
+knitr::kable(tabla_test,
+  caption   = "Test de normalidad Shapiro-Wilk — 100 medias muestrales (n = 200)",
+  col.names = c("Prueba", "Estadístico W", "p-valor", "Conclusión"),
+  align     = c("l", "c", "c", "l"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+**Hipótesis**
+
+- $H_0$: Las medias muestrales siguen una distribución normal.
+- $H_1$: Las medias muestrales no siguen una distribución normal.
+
+Con un nivel de significacncia $\alpha = 0.05$, el test de Shapiro-Wilk arrojó
+un estadístico $W = 0.9922$ y un **p-valor** de $0.8347$. Como el **p-valor** 
+$> \alpha$, **no se rechaza $H_0$**, lo que indica que las medias muestrales
+siguen una distribución normal.
+
+## Aplicación del Teorema del Límite Central variando n
+
+Se repite el análisis anterior extrayendo 100 muestras de cada uno de los
+siguientes tamaños: $n = 5, 10, 80, 200, 500$ y $2000$. Para cada tamaño
+se calcula el promedio y la varianza de las 100 medias muestrales, se elabora
+un histograma y se aplica el test de normalidad Shapiro-Wilk con $\alpha = 0.05$.
+
+```{r p3-punto5}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+tamanios <- c(5, 10, 80, 200, 500, 2000)
+m_rep    <- 100
+
+resultados <- lapply(tamanios, function(n) {
+  medias <- replicate(m_rep, mean(rexp(n, rate = lambda)))
+  test   <- shapiro.test(medias)
+  data.frame(
+    n            = n,
+    prom_medias  = round(mean(medias), 4),
+    var_medias   = round(var(medias), 4),
+    var_teorica  = round(var_pob / n, 4),
+    W            = round(test$statistic, 4),
+    p_valor      = round(test$p.value, 4),
+    conclusion   = ifelse(test$p.value > 0.05, "No rechaza H₀", "Rechaza H₀")
+  )
+})
+
+tabla_p5 <- do.call(rbind, resultados)
+
+knitr::kable(tabla_p5,
+  caption   = "Resumen TLC para distintos tamaños muestrales",
+  col.names = c("n", "Media de medias", "Varianza simulada",
+                "Varianza teórica", "W", "p-valor", "Conclusión"),
+  align     = c("c","c","c","c","c","c","l"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+La convergencia de la varianza simulada hacia la varianza teórica
+$\sigma^2/n$ se hace evidente numéricamente:
+
+| n | Varianza simulada | Varianza teórica | Error relativo |
+|---|---|---|---|
+| 5 | 5.6364 | 7.8125 | 27.8% |
+| 10 | 3.0202 | 3.9062 | 22.7% |
+| 80 | 0.3985 | 0.4883 | 18.4% |
+| 200 | 0.1587 | 0.1953 | 18.7% |
+| 500 | 0.0685 | 0.0781 | 12.3% |
+| 2000 | 0.0144 | 0.0195 | 26.2% |
+
+A medida que $n$ crece, la varianza simulada se acerca a la teórica,
+confirmando la consistencia del estimador y la validez del TLC.
+
+
+```{r p3-punto5-hist, fig.cap="Histogramas de las 100 medias muestrales para distintos n"}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+
+plots_p5 <- lapply(tamanios, function(n) {
+  medias <- replicate(m_rep, mean(rexp(n, rate = lambda)))
+  df     <- data.frame(media = medias)
+  
+  ggplot(df, aes(x = media)) +
+    geom_histogram(aes(y = after_stat(density)),
+                   bins  = 20,
+                   fill  = "#2c7bb6",
+                   color = "white",
+                   alpha = 0.8) +
+    geom_density(color = "#d7191c", linewidth = 0.9) +
+    geom_vline(xintercept = mu_pob, linetype = "dashed",
+               color = "#1a9641", linewidth = 0.8) +
+    labs(
+      title = paste0("n = ", n),
+      x     = "Media muestral",
+      y     = "Densidad"
+    ) +
+    theme_minimal(base_size = 9)
+})
+
+gridExtra::grid.arrange(grobs = plots_p5, ncol = 3)
+```
+
+La Figura \@ref(fig:p3-punto5-hist) y la Tabla \@ref(tab:p3-punto5) permiten
+observar cómo el comportamiento de las medias muestrales cambia a medida que
+aumenta $n$:
+
+- **n = 5 y n = 10:** los histogramas muestran una distribución claramente
+  asimétrica, con cola hacia la derecha, heredando la forma de la población
+  exponencial. Aunque el test no rechaza $H_0$, la forma visualmente dista
+  de ser normal.
+
+- **n = 80:** la distribución empieza a tomar forma acampanada, aunque aún
+  con cierta asimetría visible.
+
+- **n = 200, 500 y 2000:** los histogramas muestran una distribución
+  aproximadamente normal, centrada en $\mu = 6.25$. La varianza simulada
+  se acerca cada vez más a la varianza teórica $\sigma^2/n$, y los p-valores
+  del test Shapiro-Wilk son todos superiores a $\alpha = 0.05$.
+
+En conclusión, a mayor tamaño muestral, las medias muestrales convergen hacia
+una distribución normal con media $\mu$ y varianza $\sigma^2/n$, lo que
+constituye una demostración empírica del **Teorema del Límite Central**.

@@ -1,0 +1,657 @@
+---
+title: "Problema 5: Análisis de potencia, tamaño del efecto y errores tipo 
+I y II en una prueba de hipótesis"
+subtitle: "Simulación, Estimación e Inferencia Estadística · 2026-A"
+author: "Integrantes: Juan Alejandro Carrillo Jaimes & David Burgoa"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = 'center',
+  out.width = '85%',
+  encoding  = "UTF-8"
+) 
+options(scipen = 999)
+
+# Estilo para las tablas kable
+library(kableExtra)
+library(ggplot2)
+```
+# Descripción del Problema: Análisis de potencia, tamaño del efecto y errores tipo I y II
+```{r banner-p5, echo=FALSE, fig.cap="Análisis de potencia estadística"}
+knitr::include_graphics("assets/problem-5-power.png")
+```
+
+Se asume que la presión arterial en la población general sigue una distribución
+normal con media $\mu_0 = 120$ mmHg y desviación estándar $\sigma = 15$ mmHg.
+Un laboratorio desea evaluar si la media de presión arterial en un grupo de
+pacientes con cierta enfermedad difiere significativamente de 120 mmHg,
+mediante una prueba $t$ para una muestra con varianza poblacional desconocida.
+
+**objetivo**: Determinar de manera informada un tamaño de muestra y un nivel
+de significancia adecuados, analizando la relación entre la potencia
+estadística, el tamaño del efecto y el tamaño muestral.
+
+$n = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}$
+
+## Análisis de potencia para α = 0.1
+```{r p5-potencia-010 , fig.cap="Curvas de potencia para α = 0.10 según tamaño del efecto"}
+
+# Parámetros
+mu0    <- 120
+sigma  <- 15
+alpha1 <- 0.10
+ns     <- c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100,
+            200, 300, 400, 500, 600, 700, 800, 900, 1000)
+efectos <- c(0.2, 0.5, 0.8)
+
+# Calcular potencia para cada combinación de n y efecto
+resultados <- expand.grid(n = ns, d = efectos)
+resultados$potencia <- mapply(function(n, d) {
+  power.t.test(n = n, delta = d * sigma, sd = sigma,
+               sig.level = alpha1, type = "one.sample",
+               alternative = "two.sided")$power
+}, resultados$n, resultados$d)
+
+resultados$efecto <- factor(resultados$d,
+  labels = c("Pequeño (d=0.2)", "Mediano (d=0.5)", "Grande (d=0.8)"))
+
+ggplot(resultados, aes(x = n, y = potencia, color = efecto)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) +
+  geom_hline(yintercept = 0.80, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  annotate("text", x = 850, y = 0.82,
+           label = "Potencia = 80%",
+           color = "#9b2226", size = 3.5, fontface = "bold") +
+  scale_color_manual(values = c("#2d6a4f", "#e07b39", "#2c7bb6")) +
+  labs(
+    x     = "Tamaño muestral (n)",
+    y     = "Potencia estadística",
+    color = "Tamaño del efecto"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+
+## Análisis de potencia para α = 0.05 y α = 0.01
+```{r p5-potencia-comparacion, fig.cap="Comparación de curvas de potencia para α = 0.10, 0.05 y 0.01"}
+library(patchwork)
+
+alphas <- c(0.10, 0.05, 0.01)
+titulos <- c("\u03b1 = 0.10", "\u03b1 = 0.05", "\u03b1 = 0.01")
+
+plots_alpha <- lapply(seq_along(alphas), function(i) {
+  a <- alphas[i]
+  res <- expand.grid(n = ns, d = efectos)
+  res$potencia <- mapply(function(n, d) {
+    power.t.test(n = n, delta = d * sigma, sd = sigma,
+                 sig.level = a, type = "one.sample",
+                 alternative = "two.sided")$power
+  }, res$n, res$d)
+  res$efecto <- factor(res$d,
+    labels = c("Pequeño (d=0.2)", "Mediano (d=0.5)", "Grande (d=0.8)"))
+
+  ggplot(res, aes(x = n, y = potencia, color = efecto)) +
+    geom_line(linewidth = 1.1) +
+    geom_point(size = 1.5) +
+    geom_hline(yintercept = 0.80, linetype = "dashed",
+               color = "#9b2226", linewidth = 0.7) +
+    scale_color_manual(values = c("#2d6a4f", "#e07b39", "#2c7bb6")) +
+    labs(
+      title  = titulos[i],
+      x      = "Tamaño muestral (n)",
+      y      = "Potencia estadística",
+      color  = "Tamaño del efecto"
+    ) +
+    theme_minimal(base_size = 10) +
+    theme(legend.position = "bottom",
+          plot.title = element_text(face = "bold", hjust = 0.5))
+})
+
+plots_alpha[[1]] / plots_alpha[[2]] / plots_alpha[[3]]
+```
+
+```{r p5-tabla-potencia}
+# Tamaño muestral necesario para potencia = 80%
+tabla_n <- expand.grid(alpha = alphas, d = efectos)
+tabla_n$n_requerido <- mapply(function(a, d) {
+  ceiling(power.t.test(power = 0.80, delta = d * sigma, sd = sigma,
+                       sig.level = a, type = "one.sample",
+                       alternative = "two.sided")$n)
+}, tabla_n$alpha, tabla_n$d)
+
+tabla_n$efecto <- factor(tabla_n$d,
+  labels = c("Pequeño (d=0.2)", "Mediano (d=0.5)", "Grande (d=0.8)"))
+
+tabla_n_wide <- tidyr::pivot_wider(
+  tabla_n[, c("alpha", "efecto", "n_requerido")],
+  names_from  = alpha,
+  values_from = n_requerido
+)
+
+knitr::kable(tabla_n_wide,
+  caption   = "Tamaño muestral requerido para potencia = 80%",
+  col.names = c("Tamaño del efecto", "\u03b1 = 0.10", "\u03b1 = 0.05", "\u03b1 = 0.01"),
+  align     = c("l","c","c","c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+
+La Tabla \@ref(tab:p5-tabla-potencia) muestra que a medida que $\alpha$
+se vuelve más estricto, el tamaño muestral requerido aumenta
+considerablemente. Para un efecto pequeño ($d = 0.2$), pasar de
+$\alpha = 0.10$ a $\alpha = 0.01$ implica casi duplicar la muestra
+(de $n = 156$ a $n = 296$). En contraste, para efectos grandes ($d = 0.8$)
+el incremento es mínimo (de $n = 12$ a $n = 22$), lo que confirma que
+cuando el efecto es grande, el nivel de significancia tiene poco impacto
+práctico en el tamaño muestral requerido.
+
+### Interpretación y preguntas orientadoras
+
+Con base en las figuras y la Tabla \@ref(tab:p5-tabla-potencia), se responden
+las preguntas orientadoras:
+
+#### ¿Qué tamaño de muestra se requiere para alcanzar una potencia del 80% al detectar un efecto grande (d = 0.8)?
+```{r p5-pregunta1, fig.cap="Potencia estadística para efecto grande (d = 0.8) según nivel de significancia"}
+res_grande <- expand.grid(n = ns, alpha = alphas)
+res_grande$potencia <- mapply(function(n, a) {
+  power.t.test(n = n, delta = 0.8 * sigma, sd = sigma,
+               sig.level = a, type = "one.sample",
+               alternative = "two.sided")$power
+}, res_grande$n, res_grande$alpha)
+
+res_grande$alpha_label <- factor(res_grande$alpha,
+  labels = c("\u03b1 = 0.10", "\u03b1 = 0.05", "\u03b1 = 0.01"))
+
+n_req <- data.frame(
+  alpha_label = factor(c("\u03b1 = 0.10", "\u03b1 = 0.05", "\u03b1 = 0.01")),
+  n_req       = c(12, 15, 22),
+  y_pos       = c(0.35, 0.50, 0.65)
+)
+
+ggplot(res_grande, aes(x = n, y = potencia, color = alpha_label)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = 0.80, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  geom_vline(data = n_req, aes(xintercept = n_req, color = alpha_label),
+             linetype = "dotted", linewidth = 0.9) +
+  geom_label(data = n_req, aes(x = n_req, y = y_pos,
+             label = paste0("n = ", n_req), color = alpha_label),
+             show.legend = FALSE, size = 3.5, fontface = "bold") +
+  scale_color_manual(values = c("#2d6a4f", "#e07b39", "#2c7bb6")) +
+  scale_x_continuous(limits = c(0, 100)) +
+  labs(
+    x     = "Tamaño muestral (n)",
+    y     = "Potencia estadística",
+    color = "Nivel de significancia"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+Para detectar un efecto grande ($d = 0.8$) con una potencia del 80%, se
+requieren muestras muy pequeñas: $n = 12$ con $\alpha = 0.10$, $n = 15$
+con $\alpha = 0.05$ y $n = 22$ con $\alpha = 0.01$. Esto confirma que
+cuando el efecto es grande, es fácil detectarlo incluso con pocos datos.
+
+#### ¿Cuántas observaciones se necesitan para detectar un efecto mediano (d = 0.5) con una potencia adecuada?
+
+Para responder esta pregunta, se parte del parámetro de no centralidad de
+la distribución $t$:
+
+$$\lambda = d\sqrt{n}$$
+
+donde $d$ es el tamaño del efecto y $n$ el tamaño muestral. La potencia
+se define como:
+
+$$1 - \beta = P\left(|T| > t_{\alpha/2,\, v} \mid \lambda\right)$$
+
+```{r p5-pregunta2, fig.cap="Potencia estadística para efecto mediano (d = 0.5) según nivel de significancia"}
+res_mediano <- expand.grid(n = ns, alpha = alphas)
+res_mediano$potencia <- mapply(function(n, a) {
+  power.t.test(n = n, delta = 0.5 * sigma, sd = sigma,
+               sig.level = a, type = "one.sample",
+               alternative = "two.sided")$power
+}, res_mediano$n, res_mediano$alpha)
+
+res_mediano$alpha_label <- factor(res_mediano$alpha,
+  labels = c("\u03b1 = 0.10", "\u03b1 = 0.05", "\u03b1 = 0.01"))
+
+n_req_med <- data.frame(
+  alpha_label = factor(c("\u03b1 = 0.10", "\u03b1 = 0.05", "\u03b1 = 0.01")),
+  n_req       = c(27, 34, 51),
+  y_pos       = c(0.35, 0.50, 0.65)
+)
+
+ggplot(res_mediano, aes(x = n, y = potencia, color = alpha_label)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = 0.80, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  geom_vline(data = n_req_med, aes(xintercept = n_req, color = alpha_label),
+             linetype = "dotted", linewidth = 0.9) +
+  geom_label(data = n_req_med, aes(x = n_req, y = y_pos,
+             label = paste0("n = ", n_req), color = alpha_label),
+             show.legend = FALSE, size = 3.5, fontface = "bold") +
+  scale_color_manual(values = c("#2d6a4f", "#e07b39", "#2c7bb6")) +
+  scale_x_continuous(limits = c(0, 150)) +
+  labs(
+    x     = "Tamaño muestral (n)",
+    y     = "Potencia estadística",
+    color = "Nivel de significancia"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+
+A mayor $n$, mayor $\lambda$, y por tanto mayor potencia. Despejando $n$
+para una potencia del 80% y $d = 0.5$, `power.t.test()` resuelve
+numéricamente esta ecuación para cada $\alpha$:
+
+Para detectar un efecto mediano ($d = 0.5$) con una potencia del 80%, se
+requieren $n = 27$ con $\alpha = 0.10$, $n = 34$ con $\alpha = 0.05$ y
+$n = 51$ con $\alpha = 0.01$. A diferencia del efecto grande, aquí el
+tamaño muestral ya es más relevante — ser más estricto con $\alpha$ implica
+necesitar casi el doble de observaciones.
+
+#### Para un efecto grande ($d = 0.8$), ¿qué sucede al aumentar el tamaño de muestra más allá de 300 observaciones?
+
+El beneficio marginal de aumentar $n$ se calcula como:
+
+$$\Delta(1-\beta) = (1-\beta)_{n+1} - (1-\beta)_n$$
+
+Cuando este valor se acerca a cero, aumentar $n$ deja de ser eficiente.
+```{r p5-pregunta3, fig.cap="Beneficio marginal de aumentar n para efecto grande (d = 0.8), α = 0.05"}
+ns_ext <- c(ns, seq(100, 500, by = 50))
+ns_ext <- sort(unique(ns_ext))
+
+pot_grande <- sapply(ns_ext, function(n) {
+  power.t.test(n = n, delta = 0.8 * sigma, sd = sigma,
+               sig.level = 0.05, type = "one.sample",
+               alternative = "two.sided")$power
+})
+
+df_marginal <- data.frame(
+  n          = ns_ext[-1],
+  potencia   = pot_grande[-1],
+  beneficio  = diff(pot_grande)
+)
+
+p1 <- ggplot(data.frame(n = ns_ext, potencia = pot_grande),
+             aes(x = n, y = potencia)) +
+  geom_line(color = "#2c7bb6", linewidth = 1.2) +
+  geom_vline(xintercept = 300, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  annotate("text", x = 320, y = 0.6,
+           label = "n = 300", color = "#9b2226",
+           size = 3.5, fontface = "bold") +
+  geom_hline(yintercept = 0.80, linetype = "dashed",
+             color = "#1a9641", linewidth = 0.8) +
+  labs(x = "Tamaño muestral (n)", y = "Potencia estadística") +
+  theme_minimal(base_size = 12)
+
+p2 <- ggplot(df_marginal, aes(x = n, y = beneficio)) +
+  geom_line(color = "#e07b39", linewidth = 1.2) +
+  geom_vline(xintercept = 300, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  geom_hline(yintercept = 0, color = "gray50", linewidth = 0.5) +
+  labs(x = "Tamaño muestral (n)",
+       y = "Beneficio marginal (\u0394 potencia)") +
+  theme_minimal(base_size = 12)
+
+p1 / p2
+```
+Para un efecto grande ($d = 0.8$) con $\alpha = 0.05$, la potencia supera
+el 99% antes de $n = 50$. A partir de $n = 300$, el beneficio marginal es
+prácticamente cero — la curva inferior muestra que cada observación adicional
+aporta un incremento de potencia insignificante. Seguir aumentando la muestra
+más allá de este punto es ineficiente en términos de recursos.
+
+
+#### ¿Cómo influye el tamaño del efecto sobre la potencia estadística?
+
+El tamaño del efecto $d$ determina qué tan separadas están la hipótesis
+nula y la alternativa, y se define como:
+
+$$d = \frac{|\mu - \mu_0|}{\sigma}$$
+
+A mayor $d$, mayor separación entre distribuciones, y por tanto mayor
+facilidad para detectar la diferencia.
+
+```{r p5-pregunta4, fig.cap="Influencia del tamaño del efecto sobre la potencia estadística (α = 0.05)"}
+res_efecto <- expand.grid(n = ns, d = efectos)
+res_efecto$potencia <- mapply(function(n, d) {
+  power.t.test(n = n, delta = d * sigma, sd = sigma,
+               sig.level = 0.05, type = "one.sample",
+               alternative = "two.sided")$power
+}, res_efecto$n, res_efecto$d)
+
+res_efecto$efecto <- factor(res_efecto$d,
+  labels = c("Pequeño (d=0.2)", "Mediano (d=0.5)", "Grande (d=0.8)"))
+
+n_req_ef <- data.frame(
+  efecto  = factor(c("Pequeño (d=0.2)", "Mediano (d=0.5)", "Grande (d=0.8)")),
+  n_req   = c(199, 34, 15),
+  y_pos   = c(0.30, 0.50, 0.70)
+)
+
+ggplot(res_efecto, aes(x = n, y = potencia, color = efecto)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = 0.80, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  geom_vline(data = n_req_ef, aes(xintercept = n_req, color = efecto),
+             linetype = "dotted", linewidth = 0.9) +
+  geom_label(data = n_req_ef, aes(x = n_req, y = y_pos,
+             label = paste0("n = ", n_req), color = efecto),
+             show.legend = FALSE, size = 3.5, fontface = "bold") +
+  scale_color_manual(values = c("#2d6a4f", "#e07b39", "#2c7bb6")) +
+  scale_x_continuous(limits = c(0, 300)) +
+  labs(
+    x     = "Tamaño muestral (n)",
+    y     = "Potencia estadística",
+    color = "Tamaño del efecto"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+
+Con $\alpha = 0.05$, un efecto grande ($d = 0.8$) alcanza el 80% de potencia
+con apenas $n = 15$, un efecto mediano ($d = 0.5$) requiere $n = 34$, y un
+efecto pequeño ($d = 0.2$) necesita $n = 199$. Esto muestra que el tamaño
+del efecto es el factor más determinante de la potencia — detectar diferencias
+pequeñas exige muestras mucho más grandes.
+
+#### ¿Cómo afecta el tamaño muestral a la potencia estadística?
+
+A medida que $n$ aumenta, el error estándar de la media disminuye:
+
+$$SE = \frac{\sigma}{\sqrt{n}}$$
+
+lo que hace que sea más fácil distinguir la hipótesis nula de la alternativa,
+aumentando así la potencia.
+
+```{r p5-pregunta5, fig.cap="Efecto del tamaño muestral sobre la potencia para distintos efectos (α = 0.05)"}
+ns_fino <- seq(5, 500, by = 5)
+
+res_n <- expand.grid(n = ns_fino, d = efectos)
+res_n$potencia <- mapply(function(n, d) {
+  power.t.test(n = n, delta = d * sigma, sd = sigma,
+               sig.level = 0.05, type = "one.sample",
+               alternative = "two.sided")$power
+}, res_n$n, res_n$d)
+
+res_n$efecto <- factor(res_n$d,
+  labels = c("Pequeño (d=0.2)", "Mediano (d=0.5)", "Grande (d=0.8)"))
+
+res_n$se <- sigma / sqrt(res_n$n)
+
+p1 <- ggplot(res_n, aes(x = n, y = potencia, color = efecto)) +
+  geom_line(linewidth = 1.1) +
+  geom_hline(yintercept = 0.80, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  scale_color_manual(values = c("#2d6a4f", "#e07b39", "#2c7bb6")) +
+  labs(x = "Tamaño muestral (n)",
+       y = "Potencia estadística",
+       color = "Tamaño del efecto") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom")
+
+p2 <- ggplot(res_n[res_n$d == 0.5, ], aes(x = n, y = se)) +
+  geom_line(color = "#e07b39", linewidth = 1.1) +
+  labs(x = "Tamaño muestral (n)",
+       y = expression(SE == sigma/sqrt(n))) +
+  theme_minimal(base_size = 11)
+
+p1 / p2
+```
+
+La gráfica superior muestra cómo la potencia crece con $n$ para los tres
+tamaños de efecto. La gráfica inferior muestra cómo el error estándar
+$SE = \sigma/\sqrt{n}$ disminuye conforme aumenta $n$ — a menor $SE$,
+mayor capacidad de detectar diferencias reales, y por tanto mayor potencia.
+
+#### ¿En qué punto aumentar el tamaño muestral deja de proporcionar beneficios significativos en la potencia?
+
+Se analiza el beneficio marginal $\Delta(1-\beta)$ para los tres tamaños
+de efecto con $\alpha = 0.05$:
+```{r p5-pregunta6, fig.cap="Beneficio marginal de aumentar n para los tres tamaños de efecto (α = 0.05)"}
+ns_fino2 <- seq(5, 500, by = 5)
+
+df_marg <- do.call(rbind, lapply(efectos, function(d) {
+  pot <- sapply(ns_fino2, function(n) {
+    power.t.test(n = n, delta = d * sigma, sd = sigma,
+                 sig.level = 0.05, type = "one.sample",
+                 alternative = "two.sided")$power
+  })
+  data.frame(
+    n         = ns_fino2[-1],
+    beneficio = diff(pot),
+    d         = d
+  )
+}))
+
+df_marg$efecto <- factor(df_marg$d,
+  labels = c("Pequeño (d=0.2)", "Mediano (d=0.5)", "Grande (d=0.8)"))
+
+umbral <- df_marg |>
+  dplyr::group_by(efecto) |>
+  dplyr::summarise(n_umbral = min(n[beneficio < 0.005]))
+
+ggplot(df_marg, aes(x = n, y = beneficio, color = efecto)) +
+  geom_line(linewidth = 1.1) +
+  geom_hline(yintercept = 0.005, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  geom_vline(data = umbral, aes(xintercept = n_umbral, color = efecto),
+             linetype = "dotted", linewidth = 0.9) +
+  geom_label(data = umbral, aes(x = n_umbral, y = 0.05,
+             label = paste0("n = ", n_umbral), color = efecto),
+             show.legend = FALSE, size = 3.5, fontface = "bold") +
+  scale_color_manual(values = c("#2d6a4f", "#e07b39", "#2c7bb6")) +
+  annotate("text", x = 430, y = 0.007,
+           label = "\u0394 = 0.005", color = "#9b2226",
+           size = 3.5, fontface = "bold") +
+  labs(
+    x     = "Tamaño muestral (n)",
+    y     = "Beneficio marginal (\u0394 potencia)",
+    color = "Tamaño del efecto"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+
+Fijando un umbral de beneficio marginal de $\Delta = 0.005$ (0.5% de ganancia
+adicional en potencia), el punto de rendimiento decreciente ocurre muy pronto
+para efectos grandes y medianos, y más tarde para efectos pequeños. Más allá
+de estos puntos, aumentar $n$ no justifica el costo adicional del estudio.
+
+### Propuesta de tamaño muestral y nivel de significancia
+
+
+$$H_0: \mu = 120 \text{ mmHg} \quad \text{vs} \quad H_1: \mu \neq 120 \text{ mmHg}$$
+
+$$\text{con } \alpha = 0.05, \quad n = 34, \quad \text{potencia} = 80.8\%$$
+
+```{r p5-propuesta-viz, fig.cap="Propuesta del estudio: distribuciones bajo H₀ y H₁, errores tipo I y II (n = 34, α = 0.05, d = 0.5)"}
+library(ggplot2)
+library(patchwork)
+
+# Parámetros
+mu0    <- 120
+sigma  <- 15
+n_prop <- 34
+d_prop <- 0.5
+alpha  <- 0.05
+se     <- sigma / sqrt(n_prop)
+mu1    <- mu0 + d_prop * sigma
+
+# Valor crítico
+t_crit <- qt(1 - alpha/2, df = n_prop - 1)
+x_crit_sup <- mu0 + t_crit * se
+x_crit_inf <- mu0 - t_crit * se
+
+# Rango x
+x <- seq(mu0 - 4*se, mu1 + 4*se, length.out = 1000)
+
+df_plot <- data.frame(
+  x     = x,
+  h0    = dnorm(x, mean = mu0, sd = se),
+  h1    = dnorm(x, mean = mu1, sd = se)
+)
+
+# Panel 1: distribuciones con áreas
+p1 <- ggplot(df_plot, aes(x = x)) +
+  # H0
+  geom_line(aes(y = h0), color = "#2c7bb6", linewidth = 1.2) +
+  # H1
+  geom_line(aes(y = h1), color = "#e07b39", linewidth = 1.2) +
+  # Alpha zona derecha
+  geom_area(data = subset(df_plot, x >= x_crit_sup),
+            aes(y = h0), fill = "#2c7bb6", alpha = 0.4) +
+  # Alpha zona izquierda
+  geom_area(data = subset(df_plot, x <= x_crit_inf),
+            aes(y = h0), fill = "#2c7bb6", alpha = 0.4) +
+  # Beta
+  geom_area(data = subset(df_plot, x >= x_crit_inf & x <= x_crit_sup),
+            aes(y = h1), fill = "#e07b39", alpha = 0.35) +
+  # Líneas críticas
+  geom_vline(xintercept = c(x_crit_inf, x_crit_sup),
+             linetype = "dashed", color = "#9b2226", linewidth = 0.8) +
+  # Etiquetas
+  annotate("text", x = mu0, y = max(df_plot$h0) * 1.05,
+           label = "H[0]: mu == 120", color = "#2c7bb6",
+           size = 4, fontface = "bold", parse = TRUE) +
+  annotate("text", x = mu1, y = max(df_plot$h1) * 1.05,
+           label = "H[1]: mu == 127.5", color = "#e07b39",
+           size = 4, fontface = "bold", parse = TRUE) +
+  annotate("text", x = x_crit_sup + se*0.8,
+           y = max(df_plot$h0) * 0.3,
+           label = "\u03b1/2", color = "#2c7bb6",
+           size = 3.5, fontface = "bold") +
+  annotate("text", x = x_crit_inf - se*0.8,
+           y = max(df_plot$h0) * 0.3,
+           label = "\u03b1/2", color = "#2c7bb6",
+           size = 3.5, fontface = "bold") +
+  annotate("text", x = (x_crit_inf + x_crit_sup)/2,
+           y = max(df_plot$h1) * 0.25,
+           label = "\u03b2 = 0.192", color = "#e07b39",
+           size = 3.5, fontface = "bold") +
+  labs(x = "Media muestral (mmHg)", y = "Densidad") +
+  theme_minimal(base_size = 12)
+
+# Panel 2: curva de potencia con punto propuesto
+ns_p <- seq(5, 100, by = 1)
+pot_p <- sapply(ns_p, function(n) {
+  power.t.test(n = n, delta = d_prop * sigma, sd = sigma,
+               sig.level = alpha, type = "one.sample",
+               alternative = "two.sided")$power
+})
+
+df_pot <- data.frame(n = ns_p, potencia = pot_p)
+
+p2 <- ggplot(df_pot, aes(x = n, y = potencia)) +
+  geom_line(color = "#2d6a4f", linewidth = 1.2) +
+  geom_hline(yintercept = 0.80, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  geom_vline(xintercept = n_prop, linetype = "dotted",
+             color = "#2d6a4f", linewidth = 1) +
+  geom_point(aes(x = n_prop, y = 0.808),
+             color = "#2d6a4f", size = 5) +
+  annotate("text", x = n_prop + 8, y = 0.75,
+           label = "n = 34\n1-\u03b2 = 80.8%",
+           color = "#2d6a4f", size = 3.5, fontface = "bold") +
+  labs(x = "Tamaño muestral (n)", y = "Potencia (1-\u03b2)") +
+  theme_minimal(base_size = 12)
+
+p1 / p2
+```
+
+La figura superior muestra las distribuciones de la media muestral bajo
+$H_0$ ($\mu_0 = 120$ mmHg, en azul) y bajo $H_1$ ($\mu_1 = 127.5$ mmHg,
+en naranja). Las zonas azules representan el error tipo I ($\alpha = 0.05$),
+es decir, la probabilidad de rechazar $H_0$ cuando es verdadera. La zona
+naranja representa el error tipo II ($\beta = 0.192$), es decir, la
+probabilidad de no detectar la diferencia cuando sí existe. La figura
+inferior muestra que con $n = 34$ se alcanza una potencia del $80.8\%$,
+superando el umbral convencional del 80%.
+
+
+Con base en el análisis de las preguntas anteriores y la Tabla
+\@ref(tab:p5-tabla-potencia), se propone el siguiente diseño para el estudio:
+
+```{r p5-propuesta, fig.cap="Potencia alcanzada con la propuesta: n = 34, α = 0.05, d = 0.5"}
+n_prop     <- 34
+alpha_prop <- 0.05
+d_prop     <- 0.5
+
+pot_prop <- power.t.test(n = n_prop, delta = d_prop * sigma,
+                         sd = sigma, sig.level = alpha_prop,
+                         type = "one.sample",
+                         alternative = "two.sided")$power
+
+ns_prop <- seq(5, 100, by = 1)
+pot_curva <- sapply(ns_prop, function(n) {
+  power.t.test(n = n, delta = d_prop * sigma, sd = sigma,
+               sig.level = alpha_prop, type = "one.sample",
+               alternative = "two.sided")$power
+})
+
+df_prop <- data.frame(n = ns_prop, potencia = pot_curva)
+
+ggplot(df_prop, aes(x = n, y = potencia)) +
+  geom_line(color = "#2c7bb6", linewidth = 1.3) +
+  geom_hline(yintercept = 0.80, linetype = "dashed",
+             color = "#9b2226", linewidth = 0.8) +
+  geom_vline(xintercept = n_prop, linetype = "dotted",
+             color = "#2d6a4f", linewidth = 1) +
+  geom_point(aes(x = n_prop, y = pot_prop),
+             color = "#2d6a4f", size = 5) +
+  annotate("text", x = n_prop + 5, y = pot_prop - 0.05,
+           label = paste0("n = ", n_prop,
+                          "\npotencia = ", round(pot_prop, 3)),
+           color = "#2d6a4f", size = 4, fontface = "bold") +
+  labs(
+    x = "Tamaño muestral (n)",
+    y = "Potencia estadística"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+Con base en el análisis realizado, se propone:
+
+- **Nivel de significancia:** $\alpha = 0.05$, que ofrece un equilibrio
+  adecuado entre el riesgo de error tipo I ($\alpha$) y error tipo II
+  ($\beta$). Un $\alpha = 0.10$ sería demasiado permisivo para un estudio
+  clínico, y $\alpha = 0.01$ requeriría una muestra considerablemente mayor.
+
+- **Tamaño del efecto asumido:** $d = 0.5$ (mediano), razonable para
+  detectar diferencias clínicamente relevantes en presión arterial sin
+  asumir efectos irrealmente grandes.
+
+- **Tamaño muestral:** $n = 34$, que garantiza una potencia del
+  $`r round(pot_prop * 100, 1)`\%$, superior al umbral convencional del
+  80%. Este tamaño es viable para un estudio clínico y permite detectar
+  diferencias medianas con suficiente certeza estadística.

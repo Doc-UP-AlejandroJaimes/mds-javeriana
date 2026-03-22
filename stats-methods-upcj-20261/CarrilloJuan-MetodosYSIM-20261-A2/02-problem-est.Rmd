@@ -1,0 +1,279 @@
+---
+title: "Problema 2: Propiedades de los estimadores"
+subtitle: "Simulación, Estimación e Inferencia Estadística · 2026-A"
+author: "Integrantes: Juan Alejandro Carrillo Jaimes & David Burgoa"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = 'center',
+  out.width = '85%',
+  encoding  = "UTF-8"
+)
+options(scipen = 999)
+
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(patchwork)
+```
+# Descripción del Problema
+```{r banner-p2, echo=FALSE, fig.cap="Centro de atención médica"}
+knitr::include_graphics("assets/problem-2-estimadores.png")
+```
+
+Un centro de atención médica registra el tiempo de espera (en minutos) de los
+pacientes antes de ser atendidos. Se sabe que estos tiempos siguen una
+distribución Gamma con parámetros conocidos $\alpha = 3$ (forma) y $\sigma = 2$
+(escala). El parámetro de interés es la media poblacional:
+
+$$\mu = \alpha \cdot \sigma = 3 \times 2 = 6 \text{ minutos}$$
+
+Sea $X_1, X_2, \dots, X_n$ una muestra aleatoria de tamaño $n$ i.i.d.
+extraída de esta población. Se proponen los siguientes estimadores para $\mu$:
+
+$$\hat{\mu}_1 = \frac{1}{n}\sum_{i=1}^n X_i \qquad
+\hat{\mu}_2 = \frac{\min(X_1,\dots,X_n) + \max(X_1,\dots,X_n)}{2}$$
+
+$$\hat{\mu}_3 = X_{(1)} \qquad
+\hat{\mu}_4 = \frac{1}{n+1}\sum_{i=1}^n X_i$$
+
+```{r p2-parametros}
+# Parámetros poblacionales
+alpha_g <- 3
+sigma_g <- 2
+mu_pob  <- alpha_g * sigma_g  # Media poblacional = 6
+cat("Media poblacional (μ = α·σ):", mu_pob, "minutos\n")
+```
+## Simulación de estimadores
+```{r p2-simulacion, fig.cap="Distribución de los cuatro estimadores — 100 muestras de n = 10"}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+n_sim <- 10
+m_sim <- 100
+
+muestras <- replicate(m_sim, rgamma(n_sim, shape = alpha_g, scale = sigma_g))
+
+est1 <- apply(muestras, 2, mean)
+est2 <- apply(muestras, 2, function(x) (min(x) + max(x)) / 2)
+est3 <- apply(muestras, 2, min)
+est4 <- apply(muestras, 2, function(x) sum(x) / (n_sim + 1))
+
+df_est <- data.frame(
+  valor     = c(est1, est2, est3, est4),
+  estimador = rep(c("μ̂₁ (Media muestral)",
+                    "μ̂₂ (Promedio min-max)",
+                    "μ̂₃ (Mínimo muestral)",
+                    "μ̂₄ (Media ajustada)"), each = m_sim)
+)
+
+ggplot(df_est, aes(x = valor, fill = estimador)) +
+  geom_density(alpha = 0.7, color = "white") +
+  geom_vline(xintercept = mu_pob, linetype = "dashed",
+             color = "#9b2226", linewidth = 1) +
+  annotate("text", x = mu_pob + 0.5, y = 0.35,
+           label = paste0("\u03bc = ", mu_pob),
+           color = "#9b2226", size = 3.5, fontface = "bold") +
+  facet_wrap(~estimador, scales = "free_y", ncol = 2) +
+  scale_fill_manual(values = c("#2c7bb6","#e07b39","#2d6a4f","#9b2226")) +
+  labs(x = "Valor del estimador", y = "Densidad") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = "bold"))
+```
+
+La Figura \@ref(fig:p2-simulacion) muestra que $\hat{\mu}_1$ y $\hat{\mu}_4$
+presentan distribuciones centradas cerca de $\mu = 6$, mientras que
+$\hat{\mu}_3$ (mínimo muestral) se concentra en valores bajos, lejos del
+parámetro real. $\hat{\mu}_2$ muestra mayor dispersión que $\hat{\mu}_1$.
+
+## Insesgadez
+
+Un estimador $\hat{\mu}$ es **insesgado** si $E[\hat{\mu}] = \mu$. El sesgo
+se define como:
+
+$$\text{Sesgo}(\hat{\mu}) = E[\hat{\mu}] - \mu$$
+
+```{r p2-insesgadez}
+sesgos <- data.frame(
+  Estimador  = c("μ̂₁", "μ̂₂", "μ̂₃", "μ̂₄"),
+  Media_sim  = round(c(mean(est1), mean(est2), mean(est3), mean(est4)), 4),
+  Mu_pob     = mu_pob,
+  Sesgo      = round(c(mean(est1), mean(est2), mean(est3), mean(est4)) - mu_pob, 4),
+  Sesgo_rel  = round((c(mean(est1), mean(est2),
+                        mean(est3), mean(est4)) - mu_pob) / mu_pob * 100, 2)
+)
+
+knitr::kable(sesgos,
+  caption   = "Sesgo de los estimadores — 100 muestras de n = 10",
+  col.names = c("Estimador", "Media simulada", "μ poblacional",
+                "Sesgo", "Sesgo relativo (%)"),
+  align     = c("l","c","c","c","c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+```{r p2-insesgadez-plot, fig.cap="Comparación de medias simuladas vs. media poblacional"}
+ggplot(sesgos, aes(x = Estimador, y = Media_sim, fill = Estimador)) +
+  geom_col(alpha = 0.85, width = 0.5) +
+  geom_hline(yintercept = mu_pob, linetype = "dashed",
+             color = "#9b2226", linewidth = 1) +
+  geom_text(aes(label = round(Media_sim, 4)),
+            vjust = -0.8, size = 3.5, fontface = "bold") +
+  annotate("text", x = 4.45, y = mu_pob + 0.15,
+           label = paste0("\u03bc = ", mu_pob),
+           color = "#9b2226", size = 3.5, fontface = "bold") +
+  scale_fill_manual(values = c("#2c7bb6","#e07b39","#2d6a4f","#9b2226")) +
+  scale_y_continuous(limits = c(0, 8)) +
+  labs(x = "Estimador", y = "Media simulada") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
+La Tabla \@ref(tab:p2-insesgadez) y la Figura \@ref(fig:p2-insesgadez-plot)
+muestran que $\hat{\mu}_1$ es el estimador con menor sesgo absoluto, seguido
+de $\hat{\mu}_4$. El sesgo de $\hat{\mu}_4$ es negativo porque divide entre
+$n+1$ en lugar de $n$, subestimando sistemáticamente la media. $\hat{\mu}_3$
+presenta el mayor sesgo, ya que el mínimo muestral siempre tiende a ser menor
+que la media poblacional.
+
+## Consistencia
+
+Un estimador es **consistente** si su variabilidad disminuye a medida que
+$n \to \infty$. Se mide con el **coeficiente de variación (CV)**:
+
+$$CV = \frac{s_{\hat{\mu}}}{\bar{\hat{\mu}}} \times 100\%$$
+```{r p2-consistencia, fig.cap="Variabilidad relativa (CV) de los estimadores según tamaño muestral"}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+tamanios <- c(5, 10, 20, 30, 50, 60, 70, 80, 90,
+              100, 200, 300, 400, 500, 600, 700, 800, 900, 1000)
+
+cv_resultados <- lapply(tamanios, function(n) {
+  muestras_n <- replicate(100, rgamma(n, shape = alpha_g, scale = sigma_g))
+  e1 <- apply(muestras_n, 2, mean)
+  e2 <- apply(muestras_n, 2, function(x) (min(x) + max(x)) / 2)
+  e3 <- apply(muestras_n, 2, min)
+  e4 <- apply(muestras_n, 2, function(x) sum(x) / (n + 1))
+  data.frame(
+    n   = n,
+    CV1 = sd(e1) / mean(e1) * 100,
+    CV2 = sd(e2) / mean(e2) * 100,
+    CV3 = sd(e3) / mean(e3) * 100,
+    CV4 = sd(e4) / mean(e4) * 100
+  )
+})
+
+df_cv <- do.call(rbind, cv_resultados) |>
+  tidyr::pivot_longer(cols = CV1:CV4,
+                      names_to = "Estimador",
+                      values_to = "CV") |>
+  mutate(Estimador = recode(Estimador,
+    CV1 = "\u03bc\u031c\u2081 (Media muestral)",
+    CV2 = "\u03bc\u031c\u2082 (Promedio min-max)",
+    CV3 = "\u03bc\u031c\u2083 (M\u00ednimo muestral)",
+    CV4 = "\u03bc\u031c\u2084 (Media ajustada)"
+  ))
+
+ggplot(df_cv, aes(x = n, y = CV, color = Estimador)) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#2c7bb6","#e07b39","#2d6a4f","#9b2226")) +
+  labs(x = "Tamaño muestral (n)",
+       y = "Coeficiente de variación (%)",
+       color = "Estimador") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+La Figura \@ref(fig:p2-consistencia) muestra que todos los estimadores
+reducen su CV a medida que $n$ crece, lo que indica que son consistentes.
+Sin embargo, $\hat{\mu}_1$ y $\hat{\mu}_4$ convergen más rápidamente hacia
+cero, mientras que $\hat{\mu}_3$ mantiene mayor variabilidad relativa incluso
+con muestras grandes, siendo el menos consistente de los cuatro.
+
+## Eficiencia
+
+Un estimador es más **eficiente** si tiene menor varianza para el mismo
+tamaño muestral. Se compara mediante la varianza y el CV con $n = 10$:
+```{r p2-eficiencia}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+muestras_ef <- replicate(100, rgamma(10, shape = alpha_g, scale = sigma_g))
+
+e1 <- apply(muestras_ef, 2, mean)
+e2 <- apply(muestras_ef, 2, function(x) (min(x) + max(x)) / 2)
+e3 <- apply(muestras_ef, 2, min)
+e4 <- apply(muestras_ef, 2, function(x) sum(x) / (10 + 1))
+
+tabla_ef <- data.frame(
+  Estimador = c("μ̂₁ (Media muestral)",
+                "μ̂₂ (Promedio min-max)",
+                "μ̂₃ (Mínimo muestral)",
+                "μ̂₄ (Media ajustada)"),
+  Media     = round(c(mean(e1), mean(e2), mean(e3), mean(e4)), 4),
+  Varianza  = round(c(var(e1),  var(e2),  var(e3),  var(e4)),  4),
+  CV        = round(c(sd(e1)/mean(e1), sd(e2)/mean(e2),
+                      sd(e3)/mean(e3), sd(e4)/mean(e4)) * 100, 2)
+)
+
+knitr::kable(tabla_ef,
+  caption   = "Comparación de eficiencia — varianza y CV (n = 10, 100 muestras)",
+  col.names = c("Estimador", "Media", "Varianza", "CV (%)"),
+  align     = c("l","c","c","c"),
+  format    = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped","hover","condensed"),
+    full_width        = FALSE,
+    position          = "center",
+    font_size         = 14
+  )
+```
+```{r p2-eficiencia-plot, fig.cap="Comparación de varianza y CV entre estimadores (n = 10)"}
+df_ef_long <- tabla_ef |>
+  tidyr::pivot_longer(cols = c(Varianza, CV),
+                      names_to = "Metrica",
+                      values_to = "Valor")
+
+ggplot(df_ef_long, aes(x = Estimador, y = Valor, fill = Estimador)) +
+  geom_col(alpha = 0.85, width = 0.6) +
+  geom_text(aes(label = round(Valor, 2)),
+            vjust = -0.6, size = 3.2, fontface = "bold") +
+  scale_fill_manual(values = c("#2c7bb6","#e07b39","#2d6a4f","#9b2226")) +
+  facet_wrap(~Metrica, scales = "free_y") +
+  labs(x = NULL, y = "Valor") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 15, hjust = 1))
+```
+La Tabla \@ref(tab:p2-eficiencia) y la Figura \@ref(fig:p2-eficiencia-plot)
+confirman que $\hat{\mu}_1$ es el estimador más eficiente, con la menor
+varianza y el menor CV. $\hat{\mu}_4$ tiene una varianza similar pero un CV
+ligeramente mayor debido al sesgo negativo. $\hat{\mu}_3$ es el menos eficiente
+con diferencia, ya que el mínimo muestral presenta alta variabilidad y está
+muy alejado de la media poblacional. $\hat{\mu}_2$ tiene varianza intermedia
+pero mayor que $\hat{\mu}_1$.
+
+En conclusión, $\hat{\mu}_1$ (la media muestral) es el estimador óptimo:
+es el menos sesgado, el más consistente y el más eficiente de los cuatro.
+

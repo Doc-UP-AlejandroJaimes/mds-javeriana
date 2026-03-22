@@ -1,0 +1,383 @@
+---
+title: "Problema 1: Estimación de la probabilidad y la media"
+subtitle: "Simulación, Estimación e Inferencia Estadística · 2026-A"
+author: "Integrantes: Juan Alejandro Carrillo Jaimes & David Burgoa"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = 'center',
+  out.width = '85%',
+  encoding  = "UTF-8"
+)
+options(scipen = 999)
+
+# Estilo para las tablas kable
+library(kableExtra)
+library(gt)
+library(dplyr)
+```
+
+# Descripción del Problema
+```{r banner-p1, echo=FALSE, fig.cap="Empresa de servicio técnico"}
+knitr::include_graphics("assets/problem-1-tech-agent.png")
+```
+
+Una empresa de servicio técnico recibe, en promedio, **5** solicitudes de reparación por hora. Suponiendo que el número de solicitudes sigue una distribución de Poisson, realizar las siguientes actividades
+
+
+
+# .Cálculo de probabilidad teórica
+Calcular P(X = 3), es decir, la probabilidad de que lleguen exactamente 3 solicitudes en una hora según la distribución de Poisson.
+
+La probabilidad de que lleguen exactamente $X = 3$ solicitudes en una hora
+se calcula con la fórmula de Poisson:
+
+$$P(X = 3) = \frac{e^{-\lambda} \cdot \lambda^X}{X!} =
+\frac{e^{-5} \cdot 5^3}{3!} = \frac{0.006738 \cdot 125}{6} = 0.1404$$
+
+```{r p1-prob-teorica}
+
+lambda <- 5
+p_teorica <- dpois(3, lambda = lambda)
+print(paste("La probabilidad teorica es:", round(p_teorica,4)))
+
+```
+
+
+
+# .Simulación con una muestra
+
+- Genera la  muestra: X ~ Poisson(λ=5), n = 1.000
+
+- Calculá la frecuencia relativa X=3 (fn(X=3)).
+
+- Compara la probabilidad teórica P(X=3) e interpreta la aproximación.
+
+```{r p1-simulacion}
+
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+
+muestra <- rpois(1000, lambda = lambda)
+
+freq_rel <- mean(muestra == 3)
+
+print(paste("La probabilidad relativa es:", round(freq_rel,5)))
+
+```
+
+
+## .Compracion:
+```{r p1-comparacion}
+tabla <- data.frame(
+  N = 1:2,
+  Medida = c("Probabilidad Teórica", "Frecuencia Relativa"),
+  Valor  = c(p_teorica, freq_rel)
+)
+
+tabla %>%
+  gt() %>%
+  fmt_number(
+    columns = Valor,
+    decimals = 4
+  ) %>%
+  cols_label(
+    N = "N°",
+    Medida = "Indicador",
+    Valor = "Resultado"
+  ) %>%
+  tab_header(
+    title = md("**Tabla 1. Comparación entre probabilidad teórica y frecuencia relativa**"),
+    subtitle = "Distribución Poisson con λ = 5"
+  ) %>%
+  cols_align(
+    align = "center",
+    columns = c(N, Valor)
+  ) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.subtitle.font.size = 13
+  )
+```
+**Observacion:** 
+
+- La pequeña diferencia entre ambas se debe a la variabilidad muestral, y es probable que disminuya al aumentar el tamaño de la muestra (Ver tabla 1).
+
+
+
+# .Análisis de la variabilidad entre muestras
+- Genera 100 muestras aleatorias de tamaño n=1,000.
+
+- Calcula la frecuencia relativa para X=3 en cada muestra.
+
+Construye un gráfico de dispersión:
+
+- Eje X : Indexación por cada muestra (1 a 100).
+
+- Eje Y : Frecuencias relativas fn(X=3).
+
+Dibuja una línea horizontal en P(X=3) y comenta si existe una tendencia.
+
+
+```{r p1-variabilidad, fig.cap="Variabilidad de la frecuencia relativa en 100 muestras — Poisson(λ=5)"}
+
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+
+frecuencias <- numeric(100)
+
+for(i in 1:100){
+  m <- rpois(1000, lambda)
+  frecuencias[i] <- mean(m == 3)
+}
+
+plot(frecuencias,
+     type = "b",
+     pch = 16,
+     col = "darkblue",
+     xlab = "Índice de la muestra (1–100)",
+     ylab = expression(hat(P)(X==3)),
+     main = "Figura 1. Variabilidad de la frecuencia relativa en 100 muestras\nDistribución Poisson (λ = 5)",
+     ylim = c(min(frecuencias)*0.95, max(frecuencias)*1.05))
+
+abline(h = p_teorica,
+       col = "red",
+       lwd = 2,
+       lty = 2)
+
+legend("topright",
+       legend = c("Frecuencia relativa muestral",
+                  "Probabilidad teórica"),
+       col = c("darkblue", "red"),
+       lty = c(1, 2),
+       pch = c(16, NA),
+       bty = "n")
+
+mtext("Fuente: Simulación propia (n = 1000 por muestra).",
+      side = 1,
+      line = 4,
+      cex = 0.8)
+
+```
+
+
+La Figura \@ref(fig:p1-variabilidad) muestra que las 100 frecuencias
+relativas oscilan entre aproximadamente $0.12$ y $0.17$, con un promedio
+de `r round(mean(frecuencias), 4)`, muy cercano a $P(X=3) = 0.1404$.
+Esto evidencia que no existe una tendencia sistemática — las estimaciones
+fluctúan aleatoriamente alrededor del valor teórico, confirmando la
+consistencia del estimador.
+
+**Observacion:**
+
+- Las frecuencias relativas oscilan alrededor de la probabilidad teórica, mostrando la variabilidad muestral pero manteniendo coherencia con el valor esperado del modelo (er Figura 2).
+
+# .Impacto del tamaño muestral
+
+- Genera muestras aleatorias con tamaños: 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900 y 1,000. Agrega valores si consideras que mejora el análisis de los resultados.
+
+- Calcula la frecuencia relativa de X=3 para cada tamaño.
+
+Construye un gráfico de dispersión:
+
+- Eje X : Indexación (1 al 20) por cada tamaño muestral.
+
+- Eje Y : Frecuencias relativas fn(X=3).
+
+Dibuja la línea en P(X=3) y describe si aparece una tendencia.
+
+
+```{r p1-impacto-n, fig.cap="Impacto del tamaño muestral en la estimación — Poisson(λ=5)"}
+sizes <- c(5,10,20,30,40,50,60,70,80,90,
+           100,200,300,400,500,600,700,800,900,1000, 2000, 3000, 1000000)
+
+frecuencias_size <- numeric(length(sizes))
+
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+
+for(i in 1:length(sizes)){
+  m <- rpois(sizes[i], lambda)
+  frecuencias_size[i] <- mean(m == 3)
+}
+
+plot(frecuencias_size,
+     type = "b",
+     pch = 16,
+     col = "darkblue",
+     xlab = "Índice del tamaño muestral",
+     ylab = expression(hat(P)(X==3)),
+     main = "Figura 2. Impacto del tamaño muestral en la estimación\nDistribución Poisson (λ = 5)",
+     ylim = c(min(frecuencias_size)*0.95,
+              max(frecuencias_size)*1.05))
+
+abline(h = p_teorica,
+       col = "red",
+       lwd = 2,
+       lty = 2)
+
+legend("topright",
+       legend = c("Frecuencia relativa estimada",
+                  "Probabilidad teórica"),
+       col = c("darkblue", "red"),
+       lty = c(1, 2),
+       pch = c(16, NA),
+       bty = "n")
+
+mtext("Fuente: Simulación propia con tamaños muestrales crecientes.",
+      side = 1,
+      line = 4,
+      cex = 0.8)
+```
+
+**observaciones:**
+
+- Se incorporaron tres tamaños muestrales adicionales (2000, 3000 y 1,000,000) con el objetivo de evidenciar con mayor claridad el efecto de la Ley de los Grandes Números. Como se observa en la Figura 2, a medida que el tamaño muestral aumenta, la estimación se aproxima progresivamente a la probabilidad teórica; en particular, para n=1,000,000 , la diferencia es prácticamente imperceptible, mostrando una convergencia casi exacta hacia el valor esperado (ver Figura 2). 
+
+
+# .Convergencia de la media muestral
+
+- Genera 100 muestras de tamaño n=1,000.
+
+- Calcula el promedio muestral de solicitudes en cada muestra.
+
+Construye un gráfico de dispersión:
+
+- Eje X : Indexación por cada muestra (1 a 100).
+- Eje Y : Promedios muestrales.
+
+- Traza la línea horizontal en la media teórica (λ) y analiza la tendencia.
+
+Para una distribución Poisson con parámetro $\lambda$, la media y varianza
+poblacionales son iguales:
+
+$$E[X] = \lambda = 5 \qquad Var[X] = \lambda = 5$$
+
+Por tanto, el estimador $\bar{X}$ debe converger a $\lambda = 5$ conforme
+aumenta $n$, por la Ley de los Grandes Números.
+
+
+```{r p1-convergencia-media, fig.cap="Convergencia de la media muestral en 100 muestras — Poisson(λ=5)"}
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+
+medias <- numeric(100)
+
+for(i in 1:100){
+  m <- rpois(1000, lambda)
+  medias[i] <- mean(m)
+}
+
+plot(medias,
+     type = "b",
+     pch = 16,
+     col = "darkblue",
+     xlab = "Índice de la muestra (1–100)",
+     ylab = expression(bar(X)),
+     main = "Figura 3. Convergencia de la media muestral en 100 muestras\nDistribución Poisson (λ = 5)",
+     ylim = c(min(medias)*0.98, max(medias)*1.02))
+
+abline(h = lambda,
+       col = "red",
+       lwd = 2,
+       lty = 2)
+
+legend("topright",
+       legend = c("Media muestral",
+                  expression(paste("Media teórica (", lambda, ")"))),
+       col = c("darkblue", "red"),
+       lty = c(1, 2),
+       pch = c(16, NA),
+       bty = "n")
+
+mtext("Fuente: Simulación propia (n = 1000 por muestra).",
+      side = 1,
+      line = 4,
+      cex = 0.8)
+
+
+```
+
+**observaciones:**
+
+- La Figura 3 muestra que las medias muestrales obtenidas en las 100 simulaciones se distribuyen alrededor del valor teórico λ=5. Aunque existe variabilidad entre muestras, las estimaciones se mantienen cercanas al valor esperado, evidenciando estabilidad y coherencia con las propiedades teóricas de la distribución de Poisson.
+ 
+
+
+
+# .Impacto del tamaño muestral en la media
+
+- Genera muestras aleatorias con tamaños: 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900 y 1,000. Agrega valores si consideras que mejora el análisis de los resultados.
+
+- Calcula el promedio muestral para cada tamaño.
+
+Construye un gráfico de dispersión:
+
+- Eje X : Indexación (1 al 20) por cada tamaño muestral.
+
+- Eje Y : Promedios muestrales.
+
+- Dibuja la línea horizontal en la media teórica (λ) y compara si el promedio se aproxima a medida que crece el tamaño.
+
+
+```{r p1-impacto-n-media, fig.cap="Impacto del tamaño muestral en la media estimada — Poisson(λ=5)"}
+medias_size <- numeric(length(sizes))
+
+set.seed(1005062032) # Codigo: Est Juan Alejandro Carrillo Jaimes
+
+for(i in 1:length(sizes)){
+  m <- rpois(sizes[i], lambda)
+  medias_size[i] <- mean(m)
+}
+
+plot(medias_size,
+     type = "b",
+     pch = 16,
+     col = "darkblue",
+     xlab = "Índice del tamaño muestral",
+     ylab = expression(bar(X)),
+     main = "Figura 4. Impacto del tamaño muestral en la media estimada\nDistribución Poisson (λ = 5)",
+     ylim = c(min(medias_size)*0.98,
+              max(medias_size)*1.02))
+
+abline(h = lambda,
+       col = "red",
+       lwd = 2,
+       lty = 2)
+
+legend("topright",
+       legend = c("Media muestral estimada",
+                  expression(paste("Media teórica (", lambda, ")"))),
+       col = c("darkblue", "red"),
+       lty = c(1, 2),
+       pch = c(16, NA),
+       bty = "n")
+
+mtext("Fuente: Simulación propia con tamaños muestrales crecientes.",
+      side = 1,
+      line = 4,
+      cex = 0.8)
+
+
+```
+
+**Observacion:**
+
+- La Figura 4 evidencia que, para tamaños muestrales pequeños, la media estimada presenta mayor variabilidad respecto al valor teórico λ=5. Sin embargo, conforme el tamaño muestral aumenta, la estimación se estabiliza y converge progresivamente hacia la media poblacional, mostrando el efecto de la Ley de los Grandes Números.
