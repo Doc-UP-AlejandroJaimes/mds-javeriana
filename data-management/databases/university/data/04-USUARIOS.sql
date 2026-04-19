@@ -1,0 +1,22 @@
+REM INSERTING into USUARIOS
+SET DEFINE OFF;
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('1','Ben','Stone','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('2','Grace','Stone','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('3','Mikaela','Stone','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('4','Jared','Vásquez','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('5','Zeke','Landon','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('6','Saanvi','Bahl','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('7','Ulrich','Nielsen','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('8','Charlotte','Doppler','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('9','Claudia','Tiedemann','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('10','Robert','Vance','0','2');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('11','Olive','Stone','5','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('12','Cal','Stone','1','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('13','Angelina','Meyer','5','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('14','Jonas','Kahnwald','5','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('15','Martha','Nielsen','5','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('16','Bartosz','Tiedemann','5','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('17','Franziska','Doppler','5','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('18','Elisabeth','Doppler','1','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('19','Magnus','Nielsen','6','1');
+Insert into USUARIOS (ID_USUARIO,NOMBRE,APELLIDO,SEMESTRE,ID_ROL) values ('20','Mads','Nielsen','2','1');

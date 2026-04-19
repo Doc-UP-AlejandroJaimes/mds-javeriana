@@ -1,0 +1,14 @@
+REM INSERTING into BOOKS.AUTORES_LIBROS
+SET DEFINE OFF;
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('1','1');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('1','2');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('1','3');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('2','4');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('2','5');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('2','6');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('3','7');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('3','8');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('3','9');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('4','10');
+Insert into BOOKS.AUTORES_LIBROS (ID_AUTOR,ID_LIBRO) values ('5','11');
+
