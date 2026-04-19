@@ -59,10 +59,24 @@ proffessors_in_two_bachelors AS (
     GROUP BY T3.id_profesor
     HAVING COUNT(DISTINCT T2.id_carrera) >= 2
 ), bachelors_complements AS (
+    SELECT
+        T5.nombre || ' ' || T5.apellido             AS fullname_professor,
+        T1.nombre                                   AS course_name,
+        T6.nombre                                   AS career_name
     FROM cursos T1
-    JOIN proffessors_in_two_bachelors T2
-        ON 
+    JOIN cursos_carreras T2
+        ON T2.id_curso = T1.id_curso
+    JOIN calendarios_cursos T3
+        ON T3.id_curso = T2.id_curso
+    JOIN proffessors_in_two_bachelors T4
+        ON T4.id_profesor = T3.id_profesor
+    JOIN usuarios T5
+        ON T5.id_profesor = T4.id_profesor
+    JOIN carreras T6
+        ON T6.id_carrera = T2.id_carrera
 )
+SELECT *
+FROM bachelors_complements;
 
 
 
