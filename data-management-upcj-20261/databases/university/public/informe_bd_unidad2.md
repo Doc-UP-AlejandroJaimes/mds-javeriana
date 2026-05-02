@@ -191,7 +191,7 @@ ORDER BY fullname_professor, course_name;
 
 **Enunciado:** Para un estudiante en particular, obtener el listado de cursos que puede matricular. Un estudiante no puede matricular un curso que ya se encuentre matriculado. Se deben obtener: el nombre del curso, el nombre de la carrera y el semestre. Se recomienda usar `NOT EXISTS`.
 
-**Análisis:** Se listan todos los cursos disponibles en `Cursos_Carreras` (junto con su carrera y semestre), y se excluyen aquellos que el estudiante ya tiene matriculados. La subconsulta con `NOT EXISTS` verifica en `Cursos_Estudiantes`, enlazando con `Calendario_Cursos` para obtener el `ID_CURSO` asociado a cada matrícula del estudiante. El valor `11` debe reemplazarse por el `ID_USUARIO` del estudiante en cuestión, para este caso, se eligió este estudiante, que tiene _9_ cursos matriculados, de 71 cursos disponibles en toda la base. Lo que dá un total de 62 cursos restantes para matrícular, pero al tener el mismo curso en diferentes carreras, el resultado se duplica, generando 78 posibilidades de matrícula.
+**Análisis 1:** Se listan todos los cursos disponibles en `Cursos_Carreras` (junto con su carrera y semestre), y se excluyen aquellos que el estudiante ya tiene matriculados. La subconsulta con `NOT EXISTS` verifica en `Cursos_Estudiantes`, enlazando con `Calendario_Cursos` para obtener el `ID_CURSO` asociado a cada matrícula del estudiante. El valor `11` debe reemplazarse por el `ID_USUARIO` del estudiante en cuestión, para este caso, se eligió este estudiante, que tiene _9_ cursos matriculados, de 71 cursos disponibles en toda la base. Lo que dá un total de 62 cursos restantes para matrícular, pero al tener el mismo curso en diferentes carreras, el resultado se duplica, generando 78 posibilidades de matrícula.
 
 ```sql
 SELECT
@@ -206,7 +206,7 @@ WHERE NOT EXISTS (
     FROM   Cursos_Estudiantes  T4
     JOIN   Calendario_Cursos   T5  ON T5.ID_CALENDARIO = T4.ID_CALENDARIO
     WHERE  T5.ID_CURSO   = T1.ID_CURSO
-      AND  T4.ID_USUARIO = 1   -- Reemplazar con el ID del estudiante
+      AND  T4.ID_USUARIO = 11   -- Reemplazar con el ID del estudiante
 )
 ORDER BY T3.NOMBRE, T2.SEMESTRE;
 ```
@@ -214,6 +214,37 @@ ORDER BY T3.NOMBRE, T2.SEMESTRE;
 **Resultado:**
 
 ![query-d](query-d.png)
+
+
+**Análisis 2:** Debido a una interpretación entre los miembros del equipo, se añade también la siguiente consulta, asumiendo que un estudiante solo puede matricular materias de su propia carrera. Además, basándonos en los datos de la consulta previa, donde aparecen las mismas materias en diferentes cursos, se puede inferir que las materias no matriculadas pertenecerían únicamente a la carrera del estudiante. Por lo tanto, para que la consulta quede más limpia, se realiza el JOIN con la tabla de carrera.
+
+```sql
+SELECT
+    curso.nombre      AS nombre_curso,
+    carrera.nombre    AS nombre_carrera,
+    malla.semestre    AS semestre
+FROM carreras_estudiantes ce
+INNER JOIN cursos_carreras malla
+    ON ce.id_carrera = malla.id_carrera
+INNER JOIN cursos curso
+    ON malla.id_curso = curso.id_curso
+INNER JOIN carreras carrera
+    ON malla.id_carrera = carrera.id_carrera
+WHERE ce.id_usuario = 11
+  AND NOT EXISTS (
+        SELECT 1
+        FROM cursos_estudiantes inscripcion
+        INNER JOIN calendario_cursos calendario
+            ON inscripcion.id_calendario = calendario.id_calendario
+        WHERE inscripcion.id_usuario = ce.id_usuario
+          AND calendario.id_curso = curso.id_curso
+    )
+ORDER BY
+    carrera.nombre,
+    malla.semestre,
+    curso.nombre;
+```
+![query-d1](query-d1.png)
 
 ---
 
