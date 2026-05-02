@@ -1,0 +1,945 @@
+---
+title: "Regresión Lineal Simple sobre el Rendimiento Académico en Educación Secundaria"
+subtitle: "Métodos y Simulación Estadística · 20261 — Actividad 3"
+author: "Juan Alejandro Carrillo Jaimes"
+date: "2026-04-20"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+bibliography: referencias.bib
+csl: apa.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = "center",
+  fig.width = 8,
+  fig.height = 5
+)
+
+# Nivel de significancia global
+ALPHA <- 0.05
+
+# Paleta institucional Javeriana
+col_azul <- "#2C5697"
+col_amar <- "#F8CD00"
+col_gris <- "#6c757d"
+col_rojo <- "#E24B4A"
+```
+
+```{css, echo=FALSE}
+/* ── Estilos institucionales Javeriana ── */
+body {
+  font-family: 'Georgia', serif;
+  font-size: 15px;
+  color: #2d2d2d;
+}
+h1.title {
+  color: #2C5697;
+  font-size: 2em;
+  font-weight: bold;
+  border-bottom: 3px solid #F8CD00;
+  padding-bottom: 10px;
+}
+h4.author, h4.date {
+  color: #6c757d;
+}
+h1, h2, h3 {
+  color: #2C5697;
+}
+h2 {
+  border-left: 5px solid #F8CD00;
+  padding-left: 10px;
+}
+.caja-nota {
+  background-color: #eef3fb;
+  border-left: 5px solid #2C5697;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 4px;
+  font-size: 0.93em;
+}
+.caja-resultado {
+  background-color: #fffbe6;
+  border-left: 5px solid #F8CD00;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 4px;
+}
+```
+
+---
+
+# Introducción
+
+Portugal históricamente presenta un elevado índice de fracaso escolar, particularmente en asignaturas claves como Matemáticas y Lengua Portuguesa [@cortez2008]. Este trabajo tiene como fin estudiar el rendimiento académico secundario a través de un **modelo de regresión lineal simple**, tomando la calificación final (G3, [0-20]) como variable respuesta y el número de materias reprobadas (failures) como variable predictora.
+El análisis se realiza de forma independiente para cada una de las materias **(MAT y POR)**, y comprende exploración descriptiva, ajuste del modelo mediante mínimos cuadrados ordinarios (MCO), evaluación estadística, diagnóstico de supuestos, análisis de observaciones influyentes, e intervalos de confianza y predicción.
+
+El análisis se limita a modelos de regresión lineal simple con una única variable predictora cuantitativa, tal y como se propone en la Unidad 3 del curso. Todo lo que rodea a G1 y G2 (notas de periodos anteriores) queda fuera de las candidatas al ser también variables de respuesta intermedia; se busca, no obstante, una variable explicativa externa al proceso de evaluación.
+
+
+
+<div class="caja-nota">
+El análisis se encarama exclusivamente con **modelos de la regresión lineal simple** con una única variable de respuesta de tipo cuantitativo, tal como se establece en la Unidad 3 del curso. Se desecha por tanto a `G1`, por un lado, y a `G2`, por el otro, que son variables de periodo anterior ya que son variables de respuesta intermedia; se busca una variable explicativa **externa** al proceso evaluativo.
+</div>
+
+---
+
+# Exploración de Datos {#exploracion}
+
+## Descripción del conjunto de datos
+
+Los datos provienen de dos escuelas secundarias públicas de la región de Alentejo, Portugal, durante el año escolar 2005–2006. Se dispone de dos conjuntos de datos: uno para Matemáticas (MAT, $n = 395$) y otro para Portugués (POR, $n = 649$). Cada registro incluye calificaciones, características demográficas, factores sociales y aspectos escolares [@cortez2008].
+
+```{r carga-datos}
+# Carga de datos — ajusta la ruta si es necesario
+mat <- read.csv("student-mat.csv", sep = ";", header = TRUE)
+por <- read.csv("student-por.csv", sep = ";", header = TRUE)
+
+cat("MAT:", nrow(mat), "observaciones |",
+    "POR:", nrow(por), "observaciones\n")
+cat("Variables:", ncol(mat), "\n")
+```
+
+## Estadísticas descriptivas de G3
+
+```{r descriptivas-g3, results='asis'}
+library(knitr)
+library(moments)
+
+desc_tabla <- function(x, nombre) {
+  data.frame(
+    Estadístico = c("N", "Media", "Mediana", "Desv. estándar",
+                    "Mínimo", "Q1", "Q3", "Máximo",
+                    "Asimetría", "Curtosis"),
+    Valor = c(
+      length(x),
+      round(mean(x),     3),
+      round(median(x),   3),
+      round(sd(x),       3),
+      min(x),
+      as.numeric(quantile(x, 0.25)),
+      as.numeric(quantile(x, 0.75)),
+      max(x),
+      round(skewness(x), 3),
+      round(kurtosis(x), 3)
+    ),
+    Materia = nombre
+  )
+}
+
+tab_desc <- rbind(desc_tabla(mat$G3, "MAT"), desc_tabla(por$G3, "POR"))
+
+# Formato ancho
+library(tidyr)
+tab_wide <- pivot_wider(tab_desc, names_from = Materia, values_from = Valor)
+
+kable(tab_wide,
+      caption = "Estadísticas descriptivas de la nota final (G3) por materia.",
+      align   = c("l", "r", "r"))
+```
+
+```{r hist-g3, fig.cap="Distribución de la nota final (G3) para Matemáticas y Portugués. La línea amarilla indica la media.", fig.width=10, fig.height=4.5}
+library(ggplot2)
+library(gridExtra)
+
+p1 <- ggplot(mat, aes(x = G3)) +
+  geom_histogram(binwidth = 1, fill = col_azul, color = "white", alpha = 0.87) +
+  geom_vline(xintercept = mean(mat$G3), color = col_amar,
+             linetype = "dashed", linewidth = 1) +
+  annotate("text", x = mean(mat$G3) + 1, y = Inf,
+           label = paste0("Media = ", round(mean(mat$G3), 1)),
+           vjust = 2, color = col_amar, size = 3.5, fontface = "bold") +
+  labs(title    = "Distribución de G3 — Matemáticas",
+       subtitle = paste0("n = ", nrow(mat)),
+       x = "Nota Final (G3)", y = "Frecuencia") +
+  scale_x_continuous(breaks = seq(0, 20, 2)) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title    = element_text(color = col_azul, face = "bold"),
+        plot.subtitle = element_text(color = col_gris))
+
+p2 <- ggplot(por, aes(x = G3)) +
+  geom_histogram(binwidth = 1, fill = col_gris, color = "white", alpha = 0.87) +
+  geom_vline(xintercept = mean(por$G3), color = col_amar,
+             linetype = "dashed", linewidth = 1) +
+  annotate("text", x = mean(por$G3) + 1, y = Inf,
+           label = paste0("Media = ", round(mean(por$G3), 1)),
+           vjust = 2, color = col_amar, size = 3.5, fontface = "bold") +
+  labs(title    = "Distribución de G3 — Portugués",
+       subtitle = paste0("n = ", nrow(por)),
+       x = "Nota Final (G3)", y = "Frecuencia") +
+  scale_x_continuous(breaks = seq(0, 20, 2)) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title    = element_text(color = col_gris, face = "bold"),
+        plot.subtitle = element_text(color = col_gris))
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+La distribución de G3 en Matemáticas muestra asimetría negativa leve y una concentración notable de calificaciones de 0, posiblemente correspondientes a estudiantes que no presentaron el examen final. En Portugués la distribución es más simétrica y concentrada alrededor de la media (11.9 puntos), con menor variabilidad.
+
+```{r boxplot-g3, fig.cap="Boxplot comparativo de G3 por materia. Los puntos rojos representan valores atípicos.", fig.height=4.5}
+df_box <- rbind(
+  data.frame(G3 = mat$G3, Materia = "Matemáticas"),
+  data.frame(G3 = por$G3, Materia = "Portugués")
+)
+
+ggplot(df_box, aes(x = Materia, y = G3, fill = Materia)) +
+  geom_boxplot(alpha = 0.8, outlier.colour = col_rojo,
+               outlier.shape = 16, outlier.size = 2) +
+  scale_fill_manual(values = c("Matemáticas" = col_azul,
+                                "Portugués"   = col_gris)) +
+  labs(title    = "Distribución de la Nota Final por Materia",
+       subtitle = "Los puntos rojos representan valores atípicos",
+       x = "", y = "Nota Final (G3)") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        plot.title    = element_text(face = "bold", color = col_azul),
+        plot.subtitle = element_text(color = col_gris))
+```
+
+## Selección de la variable predictora
+
+Se calcularon los coeficientes de correlación de Pearson entre cada variable cuantitativa candidata y G3. Las variables `G1` y `G2` se excluyen por ser notas de período; se busca un predictor **externo** al proceso evaluativo.
+
+```{r correlaciones, fig.cap="Correlación de Pearson entre variables candidatas y G3, para Matemáticas y Portugués.", fig.height=5.5}
+candidatas <- c("age", "Medu", "Fedu", "traveltime", "studytime",
+                "failures", "famrel", "freetime", "goout",
+                "Dalc", "Walc", "health", "absences")
+
+corr_mat <- sapply(candidatas, function(v) cor(mat[[v]], mat$G3))
+corr_por <- sapply(candidatas, function(v) cor(por[[v]], por$G3))
+
+corr_mat_ord <- sort(abs(corr_mat), decreasing = TRUE)
+corr_por_ord <- sort(abs(corr_por), decreasing = TRUE)
+
+df_corr <- rbind(
+  data.frame(variable = names(corr_mat), r = as.numeric(corr_mat),
+             materia = "Matemáticas"),
+  data.frame(variable = names(corr_por), r = as.numeric(corr_por),
+             materia  = "Portugués")
+)
+
+ggplot(df_corr, aes(x = reorder(variable, abs(r)), y = r,
+                    fill = ifelse(r >= 0, "Positiva", "Negativa"))) +
+  geom_col(alpha = 0.85) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.4) +
+  coord_flip() +
+  scale_fill_manual(values = c("Positiva" = col_azul, "Negativa" = col_rojo),
+                    name = "Dirección") +
+  facet_wrap(~ materia) +
+  labs(title    = "Correlación de Pearson con G3",
+       subtitle = "Variables candidatas (sin G1 ni G2)",
+       x = "", y = "r de Pearson") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title      = element_text(face = "bold", color = col_azul),
+        plot.subtitle   = element_text(color = col_gris),
+        legend.position = "bottom")
+```
+
+```{r tabla-top3, results='asis'}
+top3_mat <- data.frame(
+  Posición  = 1:3,
+  Variable  = names(head(corr_mat_ord, 3)),
+  `|r|`     = round(head(corr_mat_ord, 3), 4),
+  r         = round(corr_mat[names(head(corr_mat_ord, 3))], 4),
+  Materia   = "MAT"
+)
+top3_por <- data.frame(
+  Posición  = 1:3,
+  Variable  = names(head(corr_por_ord, 3)),
+  `|r|`     = round(head(corr_por_ord, 3), 4),
+  r         = round(corr_por[names(head(corr_por_ord, 3))], 4),
+  Materia   = "POR"
+)
+
+kable(rbind(top3_mat, top3_por),
+      caption = "Top 3 variables con mayor correlación absoluta con G3.",
+      row.names = FALSE)
+```
+
+<div class="caja-resultado">
+**Variable predictora seleccionada: `failures`** (número de materias reprobadas previamente).
+
+- MAT: $r = -0.3604$ — la correlación negativa más fuerte entre las candidatas.
+- POR: $r = -0.3933$ — correlación negativa aún más pronunciada.
+
+La relación tiene sentido práctico: los estudiantes con mayor historial de reprobación tienden a obtener calificaciones finales más bajas.
+</div>
+
+```{r dispersion-failures, fig.cap="Diagrama de dispersión de G3 vs failures con recta de regresión lineal.", fig.width=10, fig.height=4.5}
+p_mat <- ggplot(mat, aes(x = failures, y = G3)) +
+  geom_point(color = col_azul, alpha = 0.45, size = 2) +
+  geom_smooth(method = "lm", color = col_amar, se = TRUE,
+              fill = col_amar, alpha = 0.15) +
+  labs(title    = "MAT: G3 vs failures",
+       subtitle = "r = −0.3604",
+       x = "Materias reprobadas (failures)", y = "Nota Final (G3)") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title    = element_text(color = col_azul, face = "bold"),
+        plot.subtitle = element_text(color = col_gris))
+
+p_por <- ggplot(por, aes(x = failures, y = G3)) +
+  geom_point(color = col_gris, alpha = 0.45, size = 2) +
+  geom_smooth(method = "lm", color = col_amar, se = TRUE,
+              fill = col_amar, alpha = 0.15) +
+  labs(title    = "POR: G3 vs failures",
+       subtitle = "r = −0.3933",
+       x = "Materias reprobadas (failures)", y = "Nota Final (G3)") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title    = element_text(color = col_gris, face = "bold"),
+        plot.subtitle = element_text(color = col_gris))
+
+grid.arrange(p_mat, p_por, ncol = 2)
+```
+
+---
+
+# Modelo de Regresión Lineal Simple {#modelo}
+
+El modelo propuesto es:
+
+$$G3_i = \beta_0 + \beta_1 \cdot \text{failures}_i + \varepsilon_i, \quad \varepsilon_i \sim \mathcal{N}(0, \sigma^2)$$
+
+donde $\beta_0$ es el intercepto, $\beta_1$ la pendiente, y $\varepsilon_i$ el término de error con varianza constante.
+
+## Ajuste del modelo — Matemáticas (MAT)
+
+```{r modelo-mat}
+# Variables
+x_mat <- mat$failures
+y_mat <- mat$G3
+n_mat <- length(y_mat)
+
+# Sumas de cuadrados
+x_bar_mat <- mean(x_mat);  y_bar_mat <- mean(y_mat)
+Sxx_mat   <- sum((x_mat - x_bar_mat)^2)
+Sxy_mat   <- sum((x_mat - x_bar_mat) * (y_mat - y_bar_mat))
+Syy_mat   <- sum((y_mat - y_bar_mat)^2)
+
+# Estimadores MCO
+b1_mat <- Sxy_mat / Sxx_mat
+b0_mat <- y_bar_mat - b1_mat * x_bar_mat
+
+# Ajuste con lm()
+modelo_mat <- lm(G3 ~ failures, data = mat)
+summary(modelo_mat)
+```
+
+```{r resultados-mat, results='asis'}
+s_mat     <- summary(modelo_mat)
+CME_mat   <- s_mat$sigma^2
+sigma_mat <- s_mat$sigma
+
+# Sumas de cuadrados
+SCReg_mat <- b1_mat^2 * Sxx_mat
+SCE_mat   <- Syy_mat - SCReg_mat
+R2_mat    <- SCReg_mat / Syy_mat
+F_mat     <- (SCReg_mat / 1) / CME_mat
+p_F_mat   <- pf(F_mat, 1, n_mat - 2, lower.tail = FALSE)
+
+SE_b1_mat <- sqrt(CME_mat / Sxx_mat)
+SE_b0_mat <- sqrt(CME_mat * (1/n_mat + x_bar_mat^2 / Sxx_mat))
+t_b1_mat  <- b1_mat / SE_b1_mat
+t_b0_mat  <- b0_mat / SE_b0_mat
+p_b1_mat  <- 2 * pt(abs(t_b1_mat), df = n_mat - 2, lower.tail = FALSE)
+p_b0_mat  <- 2 * pt(abs(t_b0_mat), df = n_mat - 2, lower.tail = FALSE)
+
+tab_mat <- data.frame(
+  Parámetro    = c("β̂₀ (Intercepto)", "β̂₁ (failures)"),
+  Estimación   = round(c(b0_mat, b1_mat), 4),
+  `Error Std.` = round(c(SE_b0_mat, SE_b1_mat), 4),
+  `t`          = round(c(t_b0_mat, t_b1_mat), 4),
+  `p-valor`    = format.pval(c(p_b0_mat, p_b1_mat), digits = 4, eps = 0.0001)
+)
+
+kable(tab_mat,
+      caption = "Estimaciones MCO del modelo G3 ~ failures — Matemáticas.",
+      row.names = FALSE)
+```
+
+```{r anova-mat, results='asis'}
+anova_tab_mat <- data.frame(
+  Fuente = c("Regresión", "Error", "Total"),
+  GL     = c(1, n_mat - 2, n_mat - 1),
+  SC     = round(c(SCReg_mat, SCE_mat, Syy_mat), 3),
+  CM     = round(c(SCReg_mat, CME_mat, NA), 3),
+  F      = c(round(F_mat, 4), NA, NA),
+  `p-valor` = c(format.pval(p_F_mat, digits = 4, eps = 0.0001), NA, NA)
+)
+
+kable(anova_tab_mat,
+      caption = "Tabla ANOVA del modelo de regresión — Matemáticas.",
+      row.names = FALSE, na.print = "")
+```
+
+<div class="caja-resultado">
+**MAT** — Modelo estimado: $\widehat{G3} = `r round(b0_mat, 4)` + (`r round(b1_mat, 4)`) \cdot \text{failures}$
+
+- $R^2 = `r round(R2_mat, 4)`$: el modelo explica el `r round(R2_mat*100, 1)`% de la variabilidad en G3.
+- Prueba F: $F = `r round(F_mat, 3)`$, $p < 0.001$ → el modelo es estadísticamente significativo.
+- $\hat{\beta}_1 = `r round(b1_mat, 4)`$: por cada materia reprobada adicional, la nota final disminuye en promedio `r abs(round(b1_mat, 4))` puntos.
+</div>
+
+## Ajuste del modelo — Portugués (POR)
+
+```{r modelo-por}
+x_por <- por$failures
+y_por <- por$G3
+n_por <- length(y_por)
+
+x_bar_por <- mean(x_por);  y_bar_por <- mean(y_por)
+Sxx_por   <- sum((x_por - x_bar_por)^2)
+Sxy_por   <- sum((x_por - x_bar_por) * (y_por - y_bar_por))
+Syy_por   <- sum((y_por - y_bar_por)^2)
+
+b1_por <- Sxy_por / Sxx_por
+b0_por <- y_bar_por - b1_por * x_bar_por
+
+modelo_por <- lm(G3 ~ failures, data = por)
+summary(modelo_por)
+```
+
+```{r resultados-por, results='asis'}
+s_por     <- summary(modelo_por)
+CME_por   <- s_por$sigma^2
+sigma_por <- s_por$sigma
+
+SCReg_por <- b1_por^2 * Sxx_por
+SCE_por   <- Syy_por - SCReg_por
+R2_por    <- SCReg_por / Syy_por
+F_por     <- (SCReg_por / 1) / CME_por
+p_F_por   <- pf(F_por, 1, n_por - 2, lower.tail = FALSE)
+
+SE_b1_por <- sqrt(CME_por / Sxx_por)
+SE_b0_por <- sqrt(CME_por * (1/n_por + x_bar_por^2 / Sxx_por))
+t_b1_por  <- b1_por / SE_b1_por
+t_b0_por  <- b0_por / SE_b0_por
+p_b1_por  <- 2 * pt(abs(t_b1_por), df = n_por - 2, lower.tail = FALSE)
+p_b0_por  <- 2 * pt(abs(t_b0_por), df = n_por - 2, lower.tail = FALSE)
+
+tab_por <- data.frame(
+  Parámetro    = c("β̂₀ (Intercepto)", "β̂₁ (failures)"),
+  Estimación   = round(c(b0_por, b1_por), 4),
+  `Error Std.` = round(c(SE_b0_por, SE_b1_por), 4),
+  `t`          = round(c(t_b0_por, t_b1_por), 4),
+  `p-valor`    = format.pval(c(p_b0_por, p_b1_por), digits = 4, eps = 0.0001)
+)
+
+kable(tab_por,
+      caption = "Estimaciones MCO del modelo G3 ~ failures — Portugués.",
+      row.names = FALSE)
+```
+
+```{r anova-por, results='asis'}
+anova_tab_por <- data.frame(
+  Fuente = c("Regresión", "Error", "Total"),
+  GL     = c(1, n_por - 2, n_por - 1),
+  SC     = round(c(SCReg_por, SCE_por, Syy_por), 3),
+  CM     = round(c(SCReg_por, CME_por, NA), 3),
+  F      = c(round(F_por, 4), NA, NA),
+  `p-valor` = c(format.pval(p_F_por, digits = 4, eps = 0.0001), NA, NA)
+)
+
+kable(anova_tab_por,
+      caption = "Tabla ANOVA del modelo de regresión — Portugués.",
+      row.names = FALSE, na.print = "")
+```
+
+<div class="caja-resultado">
+**POR** — Modelo estimado: $\widehat{G3} = `r round(b0_por, 4)` + (`r round(b1_por, 4)`) \cdot \text{failures}$
+
+- $R^2 = `r round(R2_por, 4)`$: el modelo explica el `r round(R2_por*100, 1)`% de la variabilidad en G3.
+- Prueba F: $F = `r round(F_por, 3)`$, $p < 0.001$ → el modelo es estadísticamente significativo.
+- $\hat{\beta}_1 = `r round(b1_por, 4)`$: por cada materia reprobada adicional, la nota final disminuye en promedio `r abs(round(b1_por, 4))` puntos.
+</div>
+
+---
+
+# Análisis de Diagnóstico {#diagnostico}
+
+Se verifican los cuatro supuestos del modelo de regresión lineal simple: **linealidad**, **independencia**, **homocedasticidad** y **normalidad** de los residuos.
+
+## Diagnóstico — Matemáticas
+
+```{r diagnostico-mat, fig.cap="Gráficos de diagnóstico del modelo G3 ~ failures — Matemáticas.", fig.width=10, fig.height=8}
+library(nortest)
+
+y_hat_mat  <- fitted(modelo_mat)
+res_mat    <- residuals(modelo_mat)
+res_std_mat <- rstandard(modelo_mat)
+
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+
+# 1. Residuos vs ajustados
+plot(y_hat_mat, res_std_mat,
+     xlab = "Valores ajustados (Ĝ3)", ylab = "Residuos estandarizados",
+     main = "Residuos vs. Valores ajustados",
+     pch = 19, col = adjustcolor(col_azul, 0.4), cex = 0.75)
+abline(h = 0,      lty = 2, col = col_rojo)
+abline(h = c(-2, 2), lty = 3, col = "orange")
+
+# 2. Q-Q
+qqnorm(res_std_mat, main = "Gráfico Q-Q — Residuos estandarizados",
+       pch = 19, col = adjustcolor(col_azul, 0.4), cex = 0.75)
+qqline(res_std_mat, col = col_rojo, lwd = 1.5)
+
+# 3. Histograma de residuos
+hist(res_std_mat, main = "Histograma de residuos estandarizados",
+     xlab = "Residuo estandarizado", ylab = "Frecuencia",
+     col = adjustcolor(col_azul, 0.3), border = "white", breaks = 15)
+curve(dnorm(x) * n_mat * diff(range(res_std_mat)) / 15,
+      add = TRUE, col = col_rojo, lwd = 2)
+
+# 4. Scale-Location
+plot(y_hat_mat, sqrt(abs(res_std_mat)),
+     xlab = "Valores ajustados", ylab = "√|Residuos estandarizados|",
+     main = "Scale-Location",
+     pch = 19, col = adjustcolor(col_azul, 0.4), cex = 0.75)
+abline(h = 1, lty = 2, col = col_rojo)
+
+par(mfrow = c(1, 1))
+```
+
+```{r pruebas-supuestos-mat, results='asis'}
+# Prueba de normalidad Shapiro-Wilk
+sw_mat <- shapiro.test(res_mat)
+
+# Prueba de Breusch-Pagan (homocedasticidad) - manual via lmtest si disponible
+# Si no tienes lmtest, usamos la correlación de Spearman de |residuos| vs ajustados
+sp_mat <- cor.test(abs(res_mat), y_hat_mat, method = "spearman")
+
+tab_pruebas_mat <- data.frame(
+  Prueba      = c("Shapiro-Wilk (normalidad)",
+                  "Spearman |e| vs ŷ (homocedasticidad)"),
+  Estadístico = c(round(sw_mat$statistic, 4),
+                  round(sp_mat$estimate, 4)),
+  `p-valor`   = c(format.pval(sw_mat$p.value,  digits = 4, eps = 0.0001),
+                  format.pval(sp_mat$p.value,   digits = 4, eps = 0.0001)),
+  Conclusión  = c(
+    ifelse(sw_mat$p.value < ALPHA,
+           "Rechaza normalidad", "No rechaza normalidad"),
+    ifelse(sp_mat$p.value < ALPHA,
+           "Posible heterocedasticidad", "No rechaza homocedasticidad")
+  )
+)
+
+kable(tab_pruebas_mat,
+      caption = "Pruebas de supuestos del modelo — Matemáticas.",
+      row.names = FALSE)
+```
+
+## Diagnóstico — Portugués
+
+```{r diagnostico-por, fig.cap="Gráficos de diagnóstico del modelo G3 ~ failures — Portugués.", fig.width=10, fig.height=8}
+y_hat_por   <- fitted(modelo_por)
+res_por     <- residuals(modelo_por)
+res_std_por <- rstandard(modelo_por)
+
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+
+plot(y_hat_por, res_std_por,
+     xlab = "Valores ajustados (Ĝ3)", ylab = "Residuos estandarizados",
+     main = "Residuos vs. Valores ajustados",
+     pch = 19, col = adjustcolor(col_gris, 0.4), cex = 0.75)
+abline(h = 0, lty = 2, col = col_rojo)
+abline(h = c(-2, 2), lty = 3, col = "orange")
+
+qqnorm(res_std_por, main = "Gráfico Q-Q — Residuos estandarizados",
+       pch = 19, col = adjustcolor(col_gris, 0.4), cex = 0.75)
+qqline(res_std_por, col = col_rojo, lwd = 1.5)
+
+hist(res_std_por, main = "Histograma de residuos estandarizados",
+     xlab = "Residuo estandarizado", ylab = "Frecuencia",
+     col = adjustcolor(col_gris, 0.3), border = "white", breaks = 15)
+curve(dnorm(x) * n_por * diff(range(res_std_por)) / 15,
+      add = TRUE, col = col_rojo, lwd = 2)
+
+plot(y_hat_por, sqrt(abs(res_std_por)),
+     xlab = "Valores ajustados", ylab = "√|Residuos estandarizados|",
+     main = "Scale-Location",
+     pch = 19, col = adjustcolor(col_gris, 0.4), cex = 0.75)
+abline(h = 1, lty = 2, col = col_rojo)
+
+par(mfrow = c(1, 1))
+```
+
+```{r pruebas-supuestos-por, results='asis'}
+sw_por <- shapiro.test(res_por)
+sp_por <- cor.test(abs(res_por), y_hat_por, method = "spearman")
+
+tab_pruebas_por <- data.frame(
+  Prueba      = c("Shapiro-Wilk (normalidad)",
+                  "Spearman |e| vs ŷ (homocedasticidad)"),
+  Estadístico = c(round(sw_por$statistic, 4),
+                  round(sp_por$estimate, 4)),
+  `p-valor`   = c(format.pval(sw_por$p.value, digits = 4, eps = 0.0001),
+                  format.pval(sp_por$p.value,  digits = 4, eps = 0.0001)),
+  Conclusión  = c(
+    ifelse(sw_por$p.value < ALPHA,
+           "Rechaza normalidad", "No rechaza normalidad"),
+    ifelse(sp_por$p.value < ALPHA,
+           "Posible heterocedasticidad", "No rechaza homocedasticidad")
+  )
+)
+
+kable(tab_pruebas_por,
+      caption = "Pruebas de supuestos del modelo — Portugués.",
+      row.names = FALSE)
+```
+
+---
+
+# Análisis de Datos Atípicos e Influyentes {#atipicos}
+
+Se emplean tres métricas complementarias: **residuos estandarizados** (valores $|e_i^*| > 2$ son sospechosos), **apalancamiento** (*leverage* $h_{ii}$, umbral $2p/n$) y **distancia de Cook** ($D_i$, umbral $4/n$).
+
+## Observaciones influyentes — Matemáticas
+
+```{r influencia-mat, fig.cap="Distancia de Cook por observación — Matemáticas. Las barras rojas superan el umbral 4/n.", fig.height=4}
+cook_mat    <- cooks.distance(modelo_mat)
+hat_mat     <- hatvalues(modelo_mat)
+umbral_mat  <- 4 / n_mat
+umbral_hat  <- 2 * 2 / n_mat   # 2p/n con p=2
+
+# Observaciones que superan al menos un umbral
+influyentes_mat <- which(cook_mat > umbral_mat | abs(res_std_mat) > 2)
+
+par(mar = c(4, 4, 3, 2))
+plot(seq_len(n_mat), cook_mat,
+     type = "h",
+     xlab = "Índice de observación", ylab = expression(D[i]),
+     main = "Distancia de Cook — Matemáticas",
+     col  = ifelse(cook_mat > umbral_mat, col_rojo, "#B4B2A9"))
+abline(h = umbral_mat, lty = 2, col = col_azul, lwd = 1.5)
+text(x = n_mat * 0.7, y = umbral_mat * 1.4,
+     labels = sprintf("4/n = %.4f", umbral_mat),
+     col = col_azul, cex = 0.8)
+```
+
+```{r tabla-influyentes-mat, results='asis'}
+if (length(influyentes_mat) > 0) {
+  tab_inf_mat <- data.frame(
+    Obs        = influyentes_mat,
+    failures   = mat$failures[influyentes_mat],
+    G3         = mat$G3[influyentes_mat],
+    Res.Std    = round(res_std_mat[influyentes_mat], 3),
+    Leverage   = round(hat_mat[influyentes_mat], 4),
+    Cook.D     = round(cook_mat[influyentes_mat], 4)
+  )
+  kable(tab_inf_mat,
+        caption = paste0("Observaciones con residuo estandarizado > 2 o",
+                         " distancia de Cook > 4/n — Matemáticas."),
+        row.names = FALSE)
+} else {
+  cat("No se identificaron observaciones influyentes bajo los umbrales definidos.\n")
+}
+```
+
+## Observaciones influyentes — Portugués
+
+```{r influencia-por, fig.cap="Distancia de Cook por observación — Portugués.", fig.height=4}
+cook_por   <- cooks.distance(modelo_por)
+hat_por    <- hatvalues(modelo_por)
+umbral_por <- 4 / n_por
+
+influyentes_por <- which(cook_por > umbral_por | abs(res_std_por) > 2)
+
+par(mar = c(4, 4, 3, 2))
+plot(seq_len(n_por), cook_por,
+     type = "h",
+     xlab = "Índice de observación", ylab = expression(D[i]),
+     main = "Distancia de Cook — Portugués",
+     col  = ifelse(cook_por > umbral_por, col_rojo, "#B4B2A9"))
+abline(h = umbral_por, lty = 2, col = col_azul, lwd = 1.5)
+text(x = n_por * 0.7, y = umbral_por * 1.4,
+     labels = sprintf("4/n = %.4f", umbral_por),
+     col = col_azul, cex = 0.8)
+```
+
+```{r tabla-influyentes-por, results='asis'}
+if (length(influyentes_por) > 0) {
+  tab_inf_por <- data.frame(
+    Obs      = influyentes_por,
+    failures = por$failures[influyentes_por],
+    G3       = por$G3[influyentes_por],
+    Res.Std  = round(res_std_por[influyentes_por], 3),
+    Leverage = round(hat_por[influyentes_por], 4),
+    Cook.D   = round(cook_por[influyentes_por], 4)
+  )
+  kable(tab_inf_por,
+        caption = paste0("Observaciones con residuo estandarizado > 2 o",
+                         " distancia de Cook > 4/n — Portugués."),
+        row.names = FALSE)
+} else {
+  cat("No se identificaron observaciones influyentes bajo los umbrales definidos.\n")
+}
+```
+
+---
+
+# Intervalos de Confianza y Predicciones {#ic}
+
+## Intervalos de confianza para los parámetros
+
+```{r ic-parametros, results='asis'}
+t_crit_mat <- qt(1 - ALPHA/2, df = n_mat - 2)
+t_crit_por <- qt(1 - ALPHA/2, df = n_por - 2)
+
+CI_b0_mat <- b0_mat + c(-1, 1) * t_crit_mat * SE_b0_mat
+CI_b1_mat <- b1_mat + c(-1, 1) * t_crit_mat * SE_b1_mat
+CI_b0_por <- b0_por + c(-1, 1) * t_crit_por * SE_b0_por
+CI_b1_por <- b1_por + c(-1, 1) * t_crit_por * SE_b1_por
+
+ic_tab <- data.frame(
+  Materia    = c("MAT", "MAT", "POR", "POR"),
+  Parámetro  = c("β₀", "β₁", "β₀", "β₁"),
+  Estimación = round(c(b0_mat, b1_mat, b0_por, b1_por), 4),
+  LI_95      = round(c(CI_b0_mat[1], CI_b1_mat[1],
+                        CI_b0_por[1], CI_b1_por[1]), 4),
+  LS_95      = round(c(CI_b0_mat[2], CI_b1_mat[2],
+                        CI_b0_por[2], CI_b1_por[2]), 4)
+)
+names(ic_tab)[4:5] <- c("LI 95%", "LS 95%")
+
+kable(ic_tab,
+      caption = "Intervalos de confianza al 95% para los parámetros del modelo.",
+      row.names = FALSE)
+```
+
+## Predicciones con bandas de confianza
+
+```{r bandas-mat, fig.cap="Recta ajustada con intervalos de confianza (verde) y predicción (rojo) al 95% — Matemáticas.", fig.height=4.5}
+x_seq_mat <- seq(min(x_mat), max(x_mat), length.out = 200)
+
+pred_ic_mat <- predict(modelo_mat,
+                       newdata  = data.frame(failures = x_seq_mat),
+                       interval = "confidence", level = 1 - ALPHA)
+pred_ip_mat <- predict(modelo_mat,
+                       newdata  = data.frame(failures = x_seq_mat),
+                       interval = "prediction", level = 1 - ALPHA)
+
+plot(x_mat, y_mat,
+     xlab = "failures", ylab = "G3",
+     main = "Recta ajustada con IC y IP al 95% — Matemáticas",
+     pch = 19, col = adjustcolor(col_azul, 0.25), cex = 0.75,
+     ylim = c(min(pred_ip_mat[,"lwr"]) - 1, max(pred_ip_mat[,"upr"]) + 1))
+
+polygon(c(x_seq_mat, rev(x_seq_mat)),
+        c(pred_ip_mat[,"upr"], rev(pred_ip_mat[,"lwr"])),
+        col = adjustcolor(col_rojo, 0.08), border = NA)
+polygon(c(x_seq_mat, rev(x_seq_mat)),
+        c(pred_ic_mat[,"upr"], rev(pred_ic_mat[,"lwr"])),
+        col = adjustcolor("#0F6E56", 0.15), border = NA)
+
+lines(x_seq_mat, pred_ic_mat[,"fit"], col = col_rojo,  lwd = 2)
+lines(x_seq_mat, pred_ic_mat[,"lwr"], col = "#0F6E56", lty = 2, lwd = 1.2)
+lines(x_seq_mat, pred_ic_mat[,"upr"], col = "#0F6E56", lty = 2, lwd = 1.2)
+lines(x_seq_mat, pred_ip_mat[,"lwr"], col = col_rojo,  lty = 3, lwd = 1.2)
+lines(x_seq_mat, pred_ip_mat[,"upr"], col = col_rojo,  lty = 3, lwd = 1.2)
+
+legend("topright",
+       legend = c("Datos", "Recta ajustada",
+                  "IC 95% para E(G3|x*)", "IP 95% individual"),
+       col = c(adjustcolor(col_azul, 0.6), col_rojo, "#0F6E56", col_rojo),
+       lty = c(NA, 1, 2, 3), pch = c(19, NA, NA, NA),
+       lwd = c(NA, 2, 1.2, 1.2), bty = "n", cex = 0.8)
+```
+
+```{r bandas-por, fig.cap="Recta ajustada con intervalos de confianza (verde) y predicción (rojo) al 95% — Portugués.", fig.height=4.5}
+x_seq_por <- seq(min(x_por), max(x_por), length.out = 200)
+
+pred_ic_por <- predict(modelo_por,
+                       newdata  = data.frame(failures = x_seq_por),
+                       interval = "confidence", level = 1 - ALPHA)
+pred_ip_por <- predict(modelo_por,
+                       newdata  = data.frame(failures = x_seq_por),
+                       interval = "prediction", level = 1 - ALPHA)
+
+plot(x_por, y_por,
+     xlab = "failures", ylab = "G3",
+     main = "Recta ajustada con IC y IP al 95% — Portugués",
+     pch = 19, col = adjustcolor(col_gris, 0.25), cex = 0.75,
+     ylim = c(min(pred_ip_por[,"lwr"]) - 1, max(pred_ip_por[,"upr"]) + 1))
+
+polygon(c(x_seq_por, rev(x_seq_por)),
+        c(pred_ip_por[,"upr"], rev(pred_ip_por[,"lwr"])),
+        col = adjustcolor(col_rojo, 0.08), border = NA)
+polygon(c(x_seq_por, rev(x_seq_por)),
+        c(pred_ic_por[,"upr"], rev(pred_ic_por[,"lwr"])),
+        col = adjustcolor("#0F6E56", 0.15), border = NA)
+
+lines(x_seq_por, pred_ic_por[,"fit"], col = col_rojo,  lwd = 2)
+lines(x_seq_por, pred_ic_por[,"lwr"], col = "#0F6E56", lty = 2, lwd = 1.2)
+lines(x_seq_por, pred_ic_por[,"upr"], col = "#0F6E56", lty = 2, lwd = 1.2)
+lines(x_seq_por, pred_ip_por[,"lwr"], col = col_rojo,  lty = 3, lwd = 1.2)
+lines(x_seq_por, pred_ip_por[,"upr"], col = col_rojo,  lty = 3, lwd = 1.2)
+
+legend("topright",
+       legend = c("Datos", "Recta ajustada",
+                  "IC 95% para E(G3|x*)", "IP 95% individual"),
+       col = c(adjustcolor(col_gris, 0.6), col_rojo, "#0F6E56", col_rojo),
+       lty = c(NA, 1, 2, 3), pch = c(19, NA, NA, NA),
+       lwd = c(NA, 2, 1.2, 1.2), bty = "n", cex = 0.8)
+```
+
+## Tabla de predicciones puntuales
+
+```{r tabla-predicciones, results='asis'}
+x_vals <- 0:3
+
+pred_mat_tabla <- predict(modelo_mat,
+                           newdata  = data.frame(failures = x_vals),
+                           interval = "prediction", level = 1 - ALPHA)
+pred_por_tabla <- predict(modelo_por,
+                           newdata  = data.frame(failures = x_vals),
+                           interval = "prediction", level = 1 - ALPHA)
+
+tab_pred <- data.frame(
+  failures    = x_vals,
+  G3_hat_MAT  = round(pred_mat_tabla[,"fit"], 3),
+  IP_LI_MAT   = round(pred_mat_tabla[,"lwr"], 3),
+  IP_LS_MAT   = round(pred_mat_tabla[,"upr"], 3),
+  G3_hat_POR  = round(pred_por_tabla[,"fit"], 3),
+  IP_LI_POR   = round(pred_por_tabla[,"lwr"], 3),
+  IP_LS_POR   = round(pred_por_tabla[,"upr"], 3)
+)
+names(tab_pred) <- c("failures",
+                      "Ĝ3 MAT", "LI 95% MAT", "LS 95% MAT",
+                      "Ĝ3 POR", "LI 95% POR", "LS 95% POR")
+
+kable(tab_pred,
+      caption = paste0("Predicciones puntuales e intervalos de predicción",
+                       " al 95% para valores de failures = 0, 1, 2, 3."),
+      row.names = FALSE)
+```
+
+---
+
+# Discusión y Conclusiones {#conclusiones}
+
+Los modelos de regresión lineal simple obtenidos confirman que la historia de reprobación (`failures`) es la variable con mayor capacidad predictiva de la nota final (G3) de entre las externas al proceso evaluativo, con correlaciones de $r = −0.36$ en Matemáticas y de $r = −0.39$ en Portugués.
+
+Ambos modelos son estadísticamente significativos (prueba F, $p < 0.001$), verificándose que la pendiente es diferente de cero. Pero los $R^2$ obtenidos —`r round(R2_mat*100,1)`% en MAT y `r round(R2_por*100,1)`% en POR— muestran cómo `failures` explica una parte moderada de la variabilidad de las notas finales. Esto resulta esperable tratándose de un modelo simple: el rendimiento académico es un fenómeno polifacético, y si bien otras variables como el apoyo familiar, el tiempo de estudio, el acceso a internet o el coeficiente de inteligencia también inciden sobre la nota, lo hacen en menor medida que la variable del modelo, como `failures`.
+
+El contraste de supuestos nos permite comprobar que los residuos no se distribuyen de manera normal perfecta (Shapiro-Wilk rechaza la hipótesis nula en ambos casos), explicable en parte por la acumulación de calificaciones de 0 —posibles ausencias al examen final— y la naturaleza discreta de la variable `failures`. No obstante, dado el tamaño de la muestra ($n=395$ en MAT/$n=649$ en POR), el teorema central del límite permitirá garantizar que el procedimiento para realizar inferencias a partir de la distribución t es robusto.
+
+En cualquier caso, las observaciones influyentes quedan perfectamente identificadas, siendo algunas de las que tienen la distancia de Cook superior al umbral $4/n$, principalmente para aquellas en las que el número de reprobaciones = 0 pero que tienen una puntuación muy reducida (los casos con posibles valores atípicos asociados a bajo rendimiento o abandono o inasistencia), pues ninguna tiene el valor superior al límite crítico $D_i>1$.
+
+Las predicciones del modelo son lógicas: un estudiante sin reprobaciones tiene una nota esperada de aproximadamente `r round(predict(modelo_mat, newdata=data.frame(failures=0)), 1)` puntos en MAT y de `r round(predict(modelo_por, newdata=data.frame(failures=0)), 1)` en POR; cada reprobación adicional hará descender tal pronóstico en aproximadamente `r abs(round(b1_mat, 1))` puntos y `r abs(round(b1_por, 1))`, respectivamente.
+
+---
+
+# Referencias {#referencias}
+
+<div id="refs"></div>
+
+- Cortez, P. & Silva, A. (2008). *Using Data Mining to Predict Secondary School Student Performance*. En A. Brito y J. Teixeira (Eds.), *Proceedings of 5th FUture BUsiness TEChnology Conference (FUBUTEC 2008)*, pp. 5–12. Porto, Portugal: EUROSIS.
+
+- Montgomery, D. C., Peck, E. A., & Vining, G. G. (2012). *Introduction to Linear Regression Analysis* (5th ed.). Wiley.
+
+- R Core Team (2024). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing. https://www.R-project.org/
+
+- Wickham, H. (2016). *ggplot2: Elegant Graphics for Data Analysis*. Springer-Verlag.
+
+---
+
+# Anexos {#anexos}
+
+## Anexo A: Código del análisis exploratorio
+
+El archivo `explore-data-script.R` contiene el código completo de exploración de datos, cálculo de correlaciones y selección de la variable predictora. Se incluye a continuación el código de las secciones más relevantes.
+
+```{r anexo-correlaciones, eval=FALSE}
+# Candidatas (sin G1, G2, G3)
+candidatas <- c("age", "Medu", "Fedu", "traveltime", "studytime",
+                "failures", "famrel", "freetime", "goout",
+                "Dalc", "Walc", "health", "absences")
+
+# Correlaciones de Pearson con G3
+corr_mat <- sapply(candidatas, function(v) cor(mat[[v]], mat$G3))
+corr_por <- sapply(candidatas, function(v) cor(por[[v]], por$G3))
+
+# Ordenar por valor absoluto
+corr_mat_ord <- sort(abs(corr_mat), decreasing = TRUE)
+corr_por_ord <- sort(abs(corr_por), decreasing = TRUE)
+
+print(round(corr_mat_ord, 4))
+print(round(corr_por_ord, 4))
+```
+
+## Anexo B: Cálculo manual MCO — Matemáticas
+
+```{r anexo-mco-mat, eval=FALSE}
+x_bar <- mean(mat$failures)
+y_bar <- mean(mat$G3)
+n     <- nrow(mat)
+
+Sxx <- sum((mat$failures - x_bar)^2)
+Sxy <- sum((mat$failures - x_bar) * (mat$G3 - y_bar))
+Syy <- sum((mat$G3 - y_bar)^2)
+
+b1_hat <- Sxy / Sxx
+b0_hat <- y_bar - b1_hat * x_bar
+
+SCReg <- b1_hat^2 * Sxx
+SCE   <- Syy - SCReg
+CME   <- SCE / (n - 2)
+R2    <- SCReg / Syy
+F_stat <- (SCReg / 1) / CME
+
+cat("β̂₀ =", round(b0_hat, 4), "\n")
+cat("β̂₁ =", round(b1_hat, 4), "\n")
+cat("R²  =", round(R2,     4), "\n")
+cat("F   =", round(F_stat, 4), "\n")
+```
+
+## Anexo C: Matriz de correlaciones completa
+
+```{r anexo-corrplot, eval=FALSE}
+library(corrplot)
+vars_corr <- cor(mat[, c(candidatas, "G3")], use = "complete.obs")
+corrplot(vars_corr, method = "color", type = "upper",
+         tl.col = "black", tl.srt = 45,
+         col = colorRampPalette(c("#E24B4A", "white", "#2C5697"))(200),
+         addCoef.col = "black", number.cex = 0.55,
+         title = "Matriz de correlaciones — Matemáticas",
+         mar   = c(0, 0, 1.5, 0))
+```
+
+## Anexo D: Resumen numérico del resumen final exploratorio
+
+```
+=============================================================
+  RESUMEN FINAL — SELECCIÓN DE VARIABLE PREDICTORA
+=============================================================
+
+  MAT — Top 3 candidatas:
+    1. failures      |r| = 0.3604  (r = -0.3604)
+    2. Medu          |r| = 0.2171  (r = +0.2171)
+    3. age           |r| = 0.1616  (r = -0.1616)
+
+  POR — Top 3 candidatas:
+    1. failures      |r| = 0.3933  (r = -0.3933)
+    2. studytime     |r| = 0.2498  (r = +0.2498)
+    3. Medu          |r| = 0.2402  (r = +0.2402)
+
+  >> Predictora seleccionada MAT: failures
+  >> Predictora seleccionada POR: failures
+=============================================================
+```
