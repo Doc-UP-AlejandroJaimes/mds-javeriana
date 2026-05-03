@@ -1,0 +1,47 @@
+{
+    "collections" : [
+        {
+            "name" : "autores",
+            "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string"
+            }
+        },
+        {
+            "name" : "editores",
+            "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string"
+            }
+        },
+        {
+            "name" : "librerias",
+            "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string",
+                "ciudad" : "string",
+                "libros" : [
+                    {
+                        "libro" : "string",
+                        "stock" : "int32"
+                    }
+                ]
+            }
+        },
+        {
+            "name" : "libros",
+           "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string",
+                "fecha_publicacion" : "date",
+                "paginas" : "int32",
+                "editor" : "ObjectId_Editores",
+                "autores" : [
+                    {
+                        "_id" : "ObjectId"
+                    }
+                ]
+            }
+        }
+    ]
+}

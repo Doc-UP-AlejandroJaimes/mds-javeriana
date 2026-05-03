@@ -1,0 +1,9 @@
+mongorestore --db books-javeriana "F:\Usuarios\study_2025\Documents\Github\Doc-UP-AlejandroJaimes\mds-javeriana\data-management-upcj-20261\databases\no-sql\books"
+
+Collection: libros
+[Document {
+	
+	"_id",
+	"nombre",
+	"paginas"
+}]

@@ -1,0 +1,21 @@
+{
+    "total_collections" : 4,
+    "collections" : [
+        {
+            "name" : "autores",
+            "storage_size" : "4.10Kb"
+        },
+        {
+            "name" : "editores",
+            "storage_size" : "4.10Kb"
+        },
+        {
+            "name" : "librerias",
+            "storage_size" : "4.10Kb"
+        },
+        {
+            "name" : "libros",
+            "storage_size" : "4.10Kb"
+        }
+    ]
+}
