@@ -1,0 +1,25 @@
+{
+    "total_collections" : 5,
+    "collections" : [
+        {
+            "name" : "carreras",
+            "storage_size" : "4.89Kb"
+        },
+        {
+            "name" : "cursos",
+            "storage_size" : "15.23Kb"
+        },
+        {
+            "name" : "estudiantes",
+            "storage_size" : "2.16Kb"
+        },
+        {
+            "name" : "facultades",
+            "storage_size" : "123.00Kb"
+        },
+        {
+            "name" : "profesores",
+            "storage_size" : "699.00Kb"
+        }
+    ]
+}

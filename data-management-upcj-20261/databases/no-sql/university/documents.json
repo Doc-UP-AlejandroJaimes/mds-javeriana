@@ -1,0 +1,63 @@
+{
+    "collections" : [
+        {
+            "name" : "carreras",
+            "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string",
+                "facultad" : "ObjectId_Facultades",
+                "cursos" : [
+                    {
+                        "curso" : "ObjectId",
+                        "semestre" : "int32"
+                    }
+                ]
+            }
+        },
+        {
+            "name" : "cursos",
+            "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string",
+                "cupo" : "int32",
+                "facultad" : "ObjectId_Facultades",
+                "profesor" : "ObjectId_Profesores",
+                 "calendario" : [
+                    {
+                        "dia" : "string",
+                        "edificio" : "string",
+                        "inicio" : "string",
+                        "fin" : "string",
+                        "salon" : "string"
+                    }
+                ]
+
+            }
+        },
+        {
+            "name" : "estudiantes",
+            "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string",
+                "semestre" : "int32",
+                "carreras" : "ObjectId_Carreras",
+                "cursos" : "ObjectId_Cursos"
+            }
+        },
+        {
+            "name" : "facultades",
+            "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string"
+            }
+        },
+        {
+            "name" : "profesores",
+            "document": {
+                "_id" : "ObjectId",
+                "nombre" : "string",
+                "facultad" : "ObjectId_Facultades"
+            }
+        }
+    ]
+}
