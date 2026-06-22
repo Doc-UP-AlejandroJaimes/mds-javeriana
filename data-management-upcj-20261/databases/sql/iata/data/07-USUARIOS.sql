@@ -1,0 +1,22 @@
+REM INSERTING into IATA.USUARIOS
+SET DEFINE OFF;
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1143678987','Isabela','Ochoa','isabela.ochoa@gmail.com','6');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1122345908','Isaac','Martínez','isaac.martinez@gmail.com','3');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1139897656','Mariano','Gómez','mariano.gomez@gmail.com','6');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1176890789','Erica','Cardona','erica.cardona@gmail.com','11');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1180567232','John','Kent','john.kent@gmail.com','8');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1144589787','Antonella','Esposito','antonella.esposito@gmail.com','10');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1154387478','Howard','Lovecraft','howard.lovecraft@gmail.com','4');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1148906356','Rafael','Nieto','rafael.nieto@gmail.com','3');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1157687452','Helena','Henao','helena.henao@gmail.com','6');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1123897612','Laura','Cortés','laura.cortes@gmail.com','3');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1134689007','Isabela','García','isabela.garcia@gmail.com','6');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1140700021','Angie','Torres','angie.torres@gmail.com','11');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1147888932','David','Caicedo','david.caicedo@gmail.com','3');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1135334567','Rafael','Calderon','rafael.calderon@gmail.com','3');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1128890089','Leonardo','Russo','leonardo.russo@gmail.com','10');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1134786666','Alfredo','López','alfredo.lopez@gmail.com','6');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1179999443','Daniela','Giraldo','daniela.giraldo@gmail.com','11');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1167897675','Daniel','Henao','daniel.henao@gmail.com','6');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1145790779','Marie-Claire','Díaz','mariec.diaz@gmail.com','11');
+Insert into IATA.USUARIOS (CEDULA,NOMBRE,APELLIDO,EMAIL,ID_CIUDAD) values ('1130876754','Santiago','Vargas','santiago.vargas@gmail.com','11');

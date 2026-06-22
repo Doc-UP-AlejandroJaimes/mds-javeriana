@@ -17,3 +17,6 @@ __pycache__/
 
 # Jupyter (por si lo usas)
 .ipynb_checkpoints/
+
+# Wallet OCI
+Wallet_IATADB.zip

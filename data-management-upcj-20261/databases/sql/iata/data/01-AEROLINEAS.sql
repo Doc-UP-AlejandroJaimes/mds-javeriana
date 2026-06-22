@@ -1,0 +1,5 @@
+REM INSERTING into IATA.AEROLINEAS
+SET DEFINE OFF;
+Insert into IATA.AEROLINEAS (ID_AEROLINEA,NOMBRE) values ('1','Avianca');
+Insert into IATA.AEROLINEAS (ID_AEROLINEA,NOMBRE) values ('2','Latam');
+Insert into IATA.AEROLINEAS (ID_AEROLINEA,NOMBRE) values ('3','Wingo');

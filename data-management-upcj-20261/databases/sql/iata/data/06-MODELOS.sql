@@ -1,0 +1,4 @@
+REM INSERTING into IATA.MODELOS
+SET DEFINE OFF;
+Insert into IATA.MODELOS (ID_MODELO,NOMBRE) values ('1','Airbus 320');
+Insert into IATA.MODELOS (ID_MODELO,NOMBRE) values ('2','Boeing 747');

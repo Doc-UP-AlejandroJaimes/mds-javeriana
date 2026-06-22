@@ -1,0 +1,10 @@
+-- VIDEOS YOUTUBE
+What is Business Intelligence BI? https://www.youtube.com/watch?v=hDJdkcdG1iA
+Qué es el Buiness Intelligence? https://www.youtube.com/watch?v=4MG6_MGhusM
+
+-- VIDEOS JAVERIANA
+Construyendo el Data Mart en Oracle SQL Developer: https://youtu.be/iMvno8dx9Ds?si=tjZR_v2SagVcJOe3
+Modelando el cubo OLAP con Schema Workbench: https://youtu.be/4yrJfpsh5Y0?si=sESQdtt6Wjy7tl74
+Procesos ETL con Data-Integration: https://youtu.be/T_3jhs6XSNw?si=m7We0DouJ9_aUaAD
+Visualizando el Data Mart y el Cubo OLAP con LinceBI.: https://youtu.be/6IRdcEck9Gs?si=dodX73EEWOTo-EWB
+
