@@ -1,0 +1,859 @@
+---
+title: "Unidad 1 | Mod. Estadísticos para la Toma de Decisiones"
+subtitle: "Actividad 1 - Evaluación de la Oferta Inmobiliaria Urbana"
+author: "Juan Alejandro Carrillo Jaimes"
+date: "22 de agosto de 2026"
+output:
+  bookdown::html_document2:
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+    df_print: paged
+language:
+  label:
+    tab: "Tabla "
+    fig: "Figura "
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = 'center',
+  out.width = '85%',
+  encoding  = "UTF-8"
+)
+options(scipen = 999)
+
+# Paleta institucional (color usado en el enunciado de la actividad)
+col_primario   <- "#034A94"
+col_secundario <- "#4AABB8"
+pal_cat        <- c("#034A94", "#4AABB8", "#8DC5CC", "#E15759", "#F2B134", "#9B59B6")
+```
+
+```{r portada, echo=FALSE, fig.align='center', out.width='45%'}
+knitr::include_graphics("portada.jpg")
+```
+
+---
+
+# Descripción
+
+Una empresa inmobiliaria líder en una gran ciudad requiere comprender el mercado de
+viviendas urbanas disponibles para tomar decisiones estratégicas de compra, venta
+y valoración de propiedades. Se cuenta con una base de datos con las
+características de las propiedades ofertadas (precio, área, ubicación, estrato,
+tipo, entre otras). Este informe primero describe esa base de datos y luego aplica
+técnicas de análisis multivariado (Componentes Principales, Conglomerados y
+Correspondencia) con el fin de identificar patrones que soporten esas decisiones.
+
+# Objetivos
+
+## Objetivo general
+
+Caracterizar la oferta inmobiliaria urbana mediante estadística descriptiva y
+técnicas multivariadas, identificando los factores que explican la variación de
+precios y los segmentos relevantes del mercado para apoyar decisiones de
+inversión.
+
+## Objetivos específicos
+
+1. Describir las variables de la base de datos (tendencia central, dispersión,
+   datos faltantes y valores atípicos) antes de aplicar cualquier técnica
+   multivariada.
+2. Reducir la dimensionalidad de las variables cuantitativas de las propiedades
+   mediante Análisis de Componentes Principales (ACP), identificando qué
+   características explican la mayor parte de la variabilidad del mercado.
+3. Segmentar las propiedades en grupos homogéneos mediante Análisis de
+   Conglomerados, para caracterizar dinámicas de oferta por zona y estrato.
+4. Examinar la asociación entre variables categóricas (tipo de vivienda, zona y
+   barrio) mediante Análisis de Correspondencia.
+5. Visualizar los resultados (incluyendo la ubicación geográfica de las
+   propiedades) para comunicar hallazgos y recomendaciones a la dirección de la
+   empresa.
+
+# Datos
+
+La base de datos `vivienda` pertenece al paquete `paqueteMODELOS` del curso y
+contiene propiedades residenciales ofertadas en la ciudad de Cali, obtenidas
+mediante *webscraping* de OLX.
+
+```{r cargar-datos}
+# devtools::install_github("centromagis/paqueteMODELOS", force = TRUE)
+library(paqueteMODELOS)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+
+data(vivienda)
+dim(vivienda)
+```
+
+## Renombre de variables
+
+Se renombran las variables originales a nombres cortos y sin tildes ni espacios (en ingles). Esto facilita
+escribir y leer el código en las secciones siguientes (por ejemplo `price` en
+vez de `preciom`), y es el nombre que se usará de aquí en adelante tanto en el
+código como en el texto.
+
+```{r renombrar-variables}
+vivienda <- vivienda |>
+  rename(
+    zone         = zona,
+    floor        = piso,
+    stratum      = estrato,
+    price        = preciom,
+    built_area   = areaconst,
+    parking      = parqueaderos,
+    bathrooms    = banios,
+    bedrooms     = habitaciones,
+    type         = tipo,
+    neighborhood = barrio,
+    longitude    = longitud,
+    latitude     = latitud
+  )
+names(vivienda)
+```
+
+**Tabla 3.1.** Descripción y clasificación de las variables (como se vio en la
+Unidad 1, sesión de Conceptos Generales, sobre naturaleza cualitativa/cuantitativa
+de las variables)
+
+```{r tabla-variables}
+# Clasificación de variables: CC=Cuant. Continua, CD=Cuant. Discreta,
+# CO=Cualitativa Ordinal, CN=Cualitativa Nominal
+variables_df <- data.frame(
+  Variable = c("id", "zone", "floor", "stratum", "price", "built_area",
+               "parking", "bathrooms", "bedrooms", "type", "neighborhood",
+               "longitude", "latitude"),
+  Original = c("id", "zona", "piso", "estrato", "preciom", "areaconst",
+               "parqueaderos", "banios", "habitaciones", "tipo", "barrio",
+               "longitud", "latitud"),
+  Descripcion = c(
+    "Identificador de la propiedad",
+    "Zona de la ciudad (Centro, Norte, Oeste, Oriente, Sur)",
+    "Piso del inmueble (aplica a apartamentos)",
+    "Estrato socioeconómico",
+    "Precio de oferta (millones de pesos)",
+    "Área construida (m2)",
+    "Número de parqueaderos",
+    "Número de baños",
+    "Número de habitaciones",
+    "Tipo de inmueble (Casa, Apartamento)",
+    "Barrio de ubicación",
+    "Coordenada de longitud",
+    "Coordenada de latitud"
+  ),
+  Tipo = c("ID", "CN", "CN", "CO", "CC", "CC", "CD", "CD", "CD", "CN", "CN", "CC", "CC")
+)
+
+kable(variables_df, col.names = c("Variable", "Nombre original", "Descripción", "Tipo"),
+      align = c("l", "l", "l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 13)
+```
+
+# Fase de Estadística Descriptiva
+
+Antes de aplicar cualquier técnica multivariada se describe el comportamiento
+individual de las variables, tal como se plantea en la Unidad 1 en la sesión de
+Conceptos Generales para el análisis univariado.
+
+```{r vars-num-def}
+vars_num <- c("price", "built_area", "parking", "bathrooms", "bedrooms")
+```
+
+## Medidas de tendencia central
+
+**Tabla 4.1.** Media y mediana de las variables cuantitativas
+
+```{r tendencia-central}
+stats_ct <- data.frame(
+  Variable = vars_num,
+  Media    = sapply(vars_num, function(v) mean(vivienda[[v]], na.rm = TRUE)),
+  Mediana  = sapply(vars_num, function(v) median(vivienda[[v]], na.rm = TRUE))
+)
+
+stats_ct |>
+  mutate(across(c(Media, Mediana), \(x) round(x, 1))) |>
+  kable(align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+**Figura 4.1.** Distribución de cada variable cuantitativa, con su media
+(línea roja) y su mediana (línea azul oscuro)
+
+```{r tendencia-central-plot, fig.height=6, fig.width=9}
+vivienda |>
+  select(all_of(vars_num)) |>
+  pivot_longer(everything(), names_to = "Variable", values_to = "Valor") |>
+  ggplot(aes(x = Valor)) +
+  geom_histogram(bins = 30, fill = col_secundario, color = "white", alpha = 0.9) +
+  geom_vline(data = stats_ct, aes(xintercept = Media), color = "#E15759",
+             linetype = "dashed", linewidth = 0.7) +
+  geom_vline(data = stats_ct, aes(xintercept = Mediana), color = "#2C3E50",
+             linetype = "dashed", linewidth = 0.7) +
+  facet_wrap(~ Variable, scales = "free", ncol = 3) +
+  theme_minimal(base_size = 11) +
+  labs(x = NULL, y = "Frecuencia")
+```
+
+`price` y `built_area` muestran media notablemente mayor que la mediana (la
+línea roja a la derecha de la azul), lo que confirma asimetría hacia la
+derecha; en `parking`, `bathrooms` y `bedrooms` ambas líneas están más
+cercanas.
+
+## Medidas de dispersión
+
+**Tabla 4.2.** Desviación estándar, rango, rango intercuartílico (IQR) y
+coeficiente de variación (CV)
+
+```{r dispersion}
+stats_disp <- data.frame(
+  Variable = vars_num,
+  DE  = sapply(vars_num, function(v) sd(vivienda[[v]], na.rm = TRUE)),
+  Min = sapply(vars_num, function(v) min(vivienda[[v]], na.rm = TRUE)),
+  Max = sapply(vars_num, function(v) max(vivienda[[v]], na.rm = TRUE)),
+  IQR = sapply(vars_num, function(v) IQR(vivienda[[v]], na.rm = TRUE))
+) |>
+  mutate(CV = round(DE / stats_ct$Media, 2))
+
+stats_disp |>
+  mutate(across(c(DE, Min, Max, IQR), \(x) round(x, 1))) |>
+  kable(col.names = c("Variable", "Desv. estándar", "Mín", "Máx", "IQR", "CV"),
+        align = c("l", rep("c", 5))) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+**Figura 4.2.** Coeficiente de variación por variable (mayor barra = mayor
+dispersión relativa)
+
+```{r dispersion-plot, fig.width=6, fig.height=3.5}
+ggplot(stats_disp, aes(x = reorder(Variable, CV), y = CV)) +
+  geom_col(fill = col_primario) +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  labs(x = NULL, y = "Coeficiente de variación (DE / Media)")
+```
+
+`built_area` tiene el coeficiente de variación más alto (0.82), seguido de cerca
+por `price` (0.76): son las dos variables con mayor dispersión relativa;
+`bathrooms` y `bedrooms` son las más homogéneas entre propiedades.
+
+## Distribución de variables categóricas
+
+**Tabla 4.3.** Frecuencia de propiedades por zona y por tipo de inmueble
+
+```{r frecuencias-categoricas}
+zone_counts <- vivienda |> filter(!is.na(zone)) |> count(zone)
+type_counts <- vivienda |> filter(!is.na(type)) |> count(type)
+
+zone_counts |>
+  kable(col.names = c("Zona", "N"), align = c("l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+type_counts |>
+  kable(col.names = c("Tipo", "N"), align = c("l", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+**Figura 4.3.** Número de propiedades por zona (izquierda) y por tipo de
+inmueble (derecha)
+
+```{r frecuencias-plot, fig.width=9, fig.height=3.5}
+p_zone <- ggplot(zone_counts, aes(x = reorder(zone, n), y = n)) +
+  geom_col(fill = col_primario) + coord_flip() +
+  theme_minimal(base_size = 11) + labs(x = NULL, y = "N")
+
+p_type <- ggplot(type_counts, aes(x = reorder(type, n), y = n)) +
+  geom_col(fill = col_secundario) + coord_flip() +
+  theme_minimal(base_size = 11) + labs(x = NULL, y = "N")
+
+grid.arrange(p_zone, p_type, ncol = 2)
+```
+
+Zona Sur concentra la mayor parte de la oferta, y los apartamentos (`type`) son
+más numerosos que las casas.
+
+## Datos faltantes
+
+**Tabla 4.4.** Datos faltantes por variable
+
+```{r na-check}
+na_df <- data.frame(
+  Variable  = names(vivienda),
+  Faltantes = colSums(is.na(vivienda))
+) |> filter(Faltantes > 0) |>
+  mutate(Pct = round(Faltantes / nrow(vivienda) * 100, 1))
+
+na_df |>
+  select(Variable, Faltantes, Pct) |>
+  kable(col.names = c("Variable", "N faltantes", "% faltantes"), align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+**Figura 4.4.** Porcentaje de datos faltantes por variable
+
+```{r na-plot, fig.width=6, fig.height=3}
+ggplot(na_df, aes(x = reorder(Variable, Pct), y = Pct)) +
+  geom_col(fill = "#E15759", alpha = 0.85) +
+  geom_text(aes(label = paste0(Pct, "%")), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  labs(x = NULL, y = "% de datos faltantes") +
+  ylim(0, max(na_df$Pct) * 1.3)
+```
+
+`floor` concentra la mayoría de los datos faltantes (no aplica a las casas) y no
+se usa en los análisis de esta actividad. `parking` sí tiene un volumen
+relevante de faltantes (19.3%); dado que el ACP y los conglomerados requieren
+observaciones completas en las variables cuantitativas (`scale()`/`prcomp()` no
+admiten `NA`), se conservan solo los registros completos en esas variables
+(`vars_num`) en vez de imputar, ya que no es el objetivo de esta actividad.
+
+```{r datos-completos}
+completos    <- complete.cases(vivienda[, vars_num])
+vivienda_cc  <- vivienda[completos, ]
+
+cat("Registros originales:", nrow(vivienda), "\n")
+cat("Registros completos para ACP y conglomerados:", nrow(vivienda_cc), "\n")
+```
+
+## Valores atípicos
+
+Se identifican valores atípicos univariados con el criterio del rango
+intercuartílico, tal como se describió en la Unidad 1 en la sesión de
+Conceptos Generales:
+
+$$LI = Q_1 - 1.5 \times IQR \qquad LS = Q_3 + 1.5 \times IQR$$
+
+**Tabla 4.5.** Número y porcentaje de valores atípicos por variable
+
+```{r atipicos-tabla}
+detect_outliers <- function(x) {
+  x   <- na.omit(x)
+  q1  <- quantile(x, 0.25); q3 <- quantile(x, 0.75)
+  iqr <- q3 - q1
+  li  <- q1 - 1.5 * iqr; ls <- q3 + 1.5 * iqr
+  sum(x < li | x > ls)
+}
+
+data.frame(
+  Variable     = vars_num,
+  N_atipicos   = sapply(vars_num, function(v) detect_outliers(vivienda[[v]])),
+  Pct_atipicos = sapply(vars_num, function(v)
+    round(detect_outliers(vivienda[[v]]) / sum(!is.na(vivienda[[v]])) * 100, 1))
+) |>
+  kable(col.names = c("Variable", "N atípicos", "% atípicos"), align = c("l", "c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+**Figura 4.5.** Distribución de las variables cuantitativas (los puntos rojos
+son valores atípicos según el criterio IQR)
+
+```{r atipicos-plot, fig.height=6, fig.width=9}
+vivienda |>
+  select(all_of(vars_num)) |>
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Valor") |>
+  ggplot(aes(x = Variable, y = Valor)) +
+  geom_boxplot(fill = col_secundario, color = "#2C3E50",
+               outlier.color = "#E15759", outlier.size = 1.2, alpha = 0.7) +
+  facet_wrap(~ Variable, scales = "free", ncol = 3) +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  labs(x = NULL, y = "Valor")
+```
+
+`price` y `built_area` son las variables con mayor proporción de atípicos, lo
+cual es consistente con la existencia de un segmento reducido de propiedades de
+lujo. Estos valores no se eliminan: reflejan comportamiento real del mercado y,
+como se ve más adelante, ayudan a caracterizar el segmento de mayor valor en el
+Análisis de Conglomerados.
+
+# Matriz de Correlaciones
+
+## Formulación
+
+La matriz de varianzas-covarianzas $\Sigma$ resume la variabilidad conjunta de
+$p$ variables cuantitativas:
+
+$$\Sigma = \begin{pmatrix}
+\sigma_1^2 & \sigma_{12} & \cdots & \sigma_{1p} \\
+\sigma_{21} & \sigma_2^2 & \cdots & \sigma_{2p} \\
+\vdots & \vdots & \ddots & \vdots \\
+\sigma_{p1} & \sigma_{p2} & \cdots & \sigma_p^2
+\end{pmatrix}$$
+
+A partir de $\Sigma$ se obtiene la matriz de correlaciones estandarizando por
+las desviaciones de cada variable, $R = D^{-1/2}\,\Sigma\,D^{-1/2}$, con $D$ la
+matriz diagonal de varianzas. Cada elemento de $R$ es
+
+$$r_{ij} = \frac{Cov[x_i, x_j]}{\sqrt{Var[x_i]\,Var[x_j]}}, \qquad -1 \le r_{ij} \le 1$$
+
+Como se vio en la Unidad 1 en la sesión de Matriz de Varianza-Covarianza y
+Correlaciones, valores cercanos a $\pm 1$ indican relación lineal fuerte y
+valores cercanos a $0$ indican ausencia de relación lineal.
+
+## Aplicación a los datos
+
+**Tabla 5.1.** Matriz de correlaciones de las variables de la propiedad
+
+```{r matriz-correlacion}
+library(corrplot)
+
+Mcor <- cor(vivienda[, vars_num], use = "pairwise.complete.obs")
+round(Mcor, 3)
+```
+
+**Figura 5.1.** Matriz de correlaciones (elipses: magnitud; números: coeficiente)
+
+```{r matriz-correlacion-plot, fig.width=6, fig.height=6}
+corrplot::corrplot.mixed(Mcor, lower = "ellipse", upper = "number", order = "hclust")
+```
+
+`parking` y `built_area` son las variables más asociadas con `price`
+(correlación de 0.689 y 0.687 respectivamente, prácticamente empatadas),
+seguidas de `bathrooms` (0.67). `bedrooms` es la que menos se relaciona con el
+precio (0.26), lo que sugiere que el precio responde más al área y a
+comodidades como parqueadero que al número de alcobas.
+
+# Análisis de Componentes Principales
+
+## Formulación
+
+El primer componente principal es una combinación lineal de las $p$ variables
+originales, $CP_1 = b_1'X = \sum_{i=1}^{p}\beta_{1i}X_i$, cuya varianza es
+$V[CP_1] = b_1'\Sigma b_1$, sujeta a la restricción de normalización
+$b_1'b_1 = 1$. Para maximizarla se usa el método de los multiplicadores de
+Lagrange:
+
+$$L = b_1'\Sigma b_1 - \lambda_1(b_1'b_1 - 1)$$
+
+Derivando respecto a $b_1$ e igualando a cero:
+
+$$\frac{\partial L}{\partial b_1} = 2\Sigma b_1 - 2\lambda_1 b_1 = 0
+\;\;\Longrightarrow\;\; \Sigma b_1 = \lambda_1 b_1$$
+
+Es decir, $b_1$ es un vector propio de $\Sigma$ y $\lambda_1$ su valor propio
+asociado, que corresponde precisamente a $V[CP_1]$. Los siguientes componentes
+se obtienen de forma análoga, imponiendo además ortogonalidad
+($Cor[CP_i,CP_j]=0$) con los anteriores. La proporción de varianza explicada
+por el componente $i$ es $\lambda_i \big/ \sum_{k=1}^{p}\lambda_k$ (Unidad 1,
+sesión de Análisis de Componentes Principales).
+
+## Aplicación a los datos
+
+Se estandarizan las variables antes de estimar los componentes (evita que
+`price`, en millones, domine la varianza frente a variables en otras escalas
+como `parking`). Se usa el subconjunto de datos completos `vivienda_cc`
+definido en la Sección 4.4.
+
+```{r acp-estimacion}
+library(factoextra)
+
+datos_z  <- scale(vivienda_cc[, vars_num])
+res.pca  <- prcomp(datos_z)
+res.pca
+```
+
+**Figura 6.1.** Varianza explicada por componente ($\lambda_i/\sum\lambda_k$)
+
+```{r acp-varianza}
+fviz_eig(res.pca, addlabels = TRUE)
+```
+
+```{r acp-resumen}
+resumen_var <- summary(res.pca)$importance
+round(resumen_var, 3)
+```
+
+Los dos primeros componentes explican `r round(resumen_var[3,2]*100,1)`% de la
+variabilidad total, lo que permite resumir las 5 variables originales en 2
+componentes sin pérdida importante de información.
+
+**Figura 6.2.** Cargas de las variables en los dos primeros componentes
+(vector propio asociado a cada eje)
+
+```{r acp-var-plot}
+fviz_pca_var(res.pca, col.var = "contrib",
+             gradient.cols = c("#F2B134", col_primario), repel = TRUE)
+```
+
+El primer componente pondera de forma similar y positiva las 5 variables
+(cargas entre 0.35 y 0.49): funciona como un eje general de tamaño y precio de
+la propiedad. El segundo componente contrasta `price` y `parking` (cargas
+positivas) frente a `bedrooms` (carga negativa dominante, -0.78): separa
+propiedades caras y con parqueadero de propiedades con muchas alcobas pero
+menor precio relativo.
+
+**Figura 6.3.** Propiedades en el plano de componentes, coloreadas por tipo de
+inmueble
+
+```{r acp-biplot, fig.width=8, fig.height=6}
+fviz_pca_ind(res.pca, geom = "point", habillage = vivienda_cc$type,
+             palette = pal_cat[1:2], alpha.ind = 0.4) +
+  labs(title = NULL)
+```
+
+Las casas (`type == "Casa"`) se ubican hacia valores más altos del primer
+componente (propiedades más grandes), mientras que los apartamentos se
+concentran en valores bajos a medios.
+
+# Análisis de Conglomerados
+
+## Formulación
+
+Para que las variables con escalas distintas no dominen el cálculo de
+distancias, se estandarizan: $z = (x-\bar x)/\sigma$. La distancia euclidiana
+entre dos propiedades $i,j$ descritas por $m$ variables estandarizadas es
+
+$$d(x_i, x_j) = \sqrt{\sum_{p=1}^{m}(x_{ip}-x_{jp})^2}$$
+
+El método jerárquico agrupa iterativamente los dos elementos (u objetos) más
+cercanos; el método k-means, en cambio, busca directamente la partición en $k$
+grupos que minimiza la suma de cuadrados dentro de cada grupo:
+
+$$\text{WCSS} = \sum_{c=1}^{k}\sum_{i \in c} \lVert x_i - \bar x_c \rVert^2$$
+
+con $\bar x_c$ el centroide del grupo $c$. Para decidir qué tan bien separado
+queda cada grupo se usa el índice de Silhouette de una observación $i$:
+
+$$s(i) = \frac{b(i)-a(i)}{\max\{a(i), b(i)\}}$$
+
+donde $a(i)$ es la distancia promedio de $i$ a los demás puntos de su propio
+grupo y $b(i)$ la distancia promedio al grupo vecino más cercano (Unidad 1,
+sesión de Análisis de Conglomerados).
+
+Para el método jerárquico existen varios criterios de enlace (salto mínimo,
+salto máximo, promedio y agregación de Ward). Se usa el criterio de **Ward**,
+que en cada paso fusiona el par de grupos que produce el menor incremento en
+la WCSS total — el mismo criterio que optimiza k-means — por lo que ambos
+métodos tienden a ser consistentes entre sí. Otros criterios (como el
+promedio) son más sensibles a valores atípicos y pueden producir fusiones
+dominadas por un único punto extremo antes que agrupaciones representativas
+del conjunto de datos.
+
+## Aplicación a los datos
+
+Dado el tamaño de la base (`r nrow(vivienda_cc)` propiedades con datos
+completos), un dendograma jerárquico sobre la totalidad de los datos sería
+costoso de calcular y de leer; por eso se usa una muestra para decidir el
+número de segmentos (el método jerárquico permite determinar el número de
+clases que luego se usará en un método no jerárquico) y después se aplica
+k-means sobre la totalidad de los datos.
+
+Se toma una muestra de 300 propiedades y se agrupan con enlace de Ward para
+estimar, mediante el índice de Silhouette, cuántos segmentos existen.
+
+```{r conglomerados-muestra}
+set.seed(1234)
+muestra_idx  <- sample(nrow(datos_z), 300)
+muestra_z    <- datos_z[muestra_idx, ]
+
+dist_muestra <- dist(muestra_z, method = "euclidean")
+hc_muestra   <- hclust(dist_muestra, method = "ward.D2")
+```
+
+**Tabla 7.1.** Índice de Silhouette promedio para distintos valores de k (sobre
+la muestra de 300, con enlace de Ward)
+
+```{r silhouette-k}
+library(cluster)
+
+sil_k <- sapply(2:6, function(k) {
+  grupos <- cutree(hc_muestra, k = k)
+  mean(silhouette(grupos, dist_muestra)[, 3])
+})
+
+data.frame(k = 2:6, Silhouette = round(sil_k, 3)) |>
+  kable(align = c("c", "c")) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r k-optimo}
+k_opt <- (2:6)[which.max(sil_k)]
+k_opt
+```
+
+`r k_opt` segmentos maximizan el índice de Silhouette en la muestra, por lo que
+se usa ese valor de k para segmentar la base completa mediante k-means (método
+no jerárquico, más eficiente para `r nrow(vivienda_cc)` observaciones que el
+jerárquico). Para representar gráficamente el dendograma se usa una submuestra
+más pequeña (n = 40): con 300 hojas el árbol se vuelve ilegible, mientras que
+con una muestra pequeña se puede seguir visualmente cómo se van fusionando los
+grupos hasta llegar a los `r k_opt` segmentos.
+
+**Figura 7.1.** Dendograma sobre una submuestra (n = 40), coloreado según los
+`r k_opt` segmentos elegidos en la Tabla 7.1
+
+```{r dendograma-plot, fig.width=8, fig.height=5}
+muestra_chica <- muestra_z[sample(nrow(muestra_z), 40), ]
+hc_chica <- hclust(dist(muestra_chica, method = "euclidean"), method = "ward.D2")
+
+fviz_dend(hc_chica, k = k_opt, cex = 0.6, k_colors = pal_cat[1:k_opt],
+          rect = TRUE, rect_fill = TRUE, rect_border = pal_cat[1:k_opt],
+          main = NULL, xlab = "Propiedades", ylab = "Distancia euclidiana")
+```
+
+```{r kmeans-completo}
+set.seed(1234)
+km <- kmeans(datos_z, centers = k_opt, nstart = 25)
+
+vivienda_cc$segment <- factor(km$cluster)
+table(vivienda_cc$segment)
+```
+
+**Tabla 7.2.** Perfil de cada segmento (medias en la escala original)
+
+```{r perfil-segmentos}
+etiquetas_segmento <- c("1" = "Económico", "2" = "Medio", "3" = "Premium")
+
+vivienda_cc |>
+  group_by(segment) |>
+  summarise(across(all_of(vars_num), mean), n = n()) |>
+  mutate(across(all_of(vars_num), \(x) round(x, 1)),
+         Perfil = etiquetas_segmento[as.character(segment)]) |>
+  relocate(Perfil, .after = segment) |>
+  kable() |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE)
+```
+
+**Figura 7.2.** Segmentos en el plano de los dos primeros componentes
+principales (solo el contorno de cada elipse, sin relleno, para no saturar el
+área donde los segmentos se tocan)
+
+```{r cluster-plot, fig.width=8, fig.height=6}
+fviz_cluster(list(data = datos_z, cluster = km$cluster),
+             geom = "point", pointsize = 0.6,
+             palette = pal_cat, ellipse.type = "norm", ellipse.alpha = 0,
+             ggtheme = theme_minimal()) +
+  labs(title = NULL)
+```
+
+Los segmentos se diferencian principalmente por tamaño y precio de la
+propiedad, en orden creciente: Económico (`r sum(km$cluster==1)` propiedades),
+Medio (`r sum(km$cluster==2)`) y Premium (`r sum(km$cluster==3)`) (Tabla 7.2).
+El traslape visible entre segmentos adyacentes en la Figura 7.2 (Económico con
+Medio, y Medio con Premium) es esperado y no un error: `built_area`, `price` y
+las demás variables varían de forma continua entre propiedades, no en bloques
+discretos, por lo que k-means corta ese continuo en tres tramos con fronteras
+necesariamente difusas. El segmento Premium sí se distingue con claridad del
+Económico. La relación de estos segmentos con la ubicación geográfica se
+evalúa formalmente en la Sección 9.
+
+# Análisis de Correspondencia
+
+## Formulación
+
+Para dos variables categóricas A y B se construye una tabla de contingencia
+$n_{ij}$ y se compara con la tabla de frecuencias esperadas bajo independencia,
+$n_{ij}^{esp} = n_{i.}\,n_{.j}/n$, mediante el estadístico chi-cuadrado de
+Pearson:
+
+$$\chi^2 = \sum_{i,j} \frac{\left(n_{ij}-n_{ij}^{esp}\right)^2}{n_{ij}^{esp}}$$
+
+A partir de la matriz de discrepancias (o residuos estandarizados) $C$, el
+análisis de correspondencia factoriza mediante descomposición en valores
+singulares $C = U D V'$, de donde se obtienen las coordenadas de las filas
+($U\sqrt{D}$) y de las columnas ($V\sqrt{D}$) que se representan en el plano
+factorial, tal como se vio en la Unidad 1 en la sesión de Análisis de
+Correspondencia.
+
+## Zona vs. tipo de inmueble
+
+```{r ca-zona-tipo}
+library(FactoMineR)
+
+tabla_zona_tipo <- table(vivienda$zone, vivienda$type)
+tabla_zona_tipo
+chisq.test(tabla_zona_tipo)
+```
+
+```{r ca-zona-tipo-ca}
+# type solo tiene 2 categorías, por lo que el AC entre zone y type tiene un
+# único eje (min(filas-1, columnas-1) = 1); no aplica un mapa 2D, se reportan
+# las coordenadas de ese único eje
+res.ca1 <- CA(tabla_zona_tipo, graph = FALSE)
+round(res.ca1$row$coord, 3)
+round(res.ca1$col$coord, 3)
+```
+
+**Figura 8.1.** Proporción de tipo de inmueble por zona
+
+```{r ca-zona-tipo-plot, fig.width=7, fig.height=5}
+vivienda |>
+  filter(!is.na(zone), !is.na(type)) |>
+  count(zone, type) |>
+  group_by(zone) |>
+  mutate(pct = n / sum(n)) |>
+  ggplot(aes(x = zone, y = pct, fill = type)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = pal_cat[1:2]) +
+  scale_y_continuous(labels = scales::percent) +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  labs(x = NULL, y = "Proporción", fill = "Tipo")
+```
+
+El p-value rechaza la independencia entre `zone` y `type`. Las coordenadas del
+único eje del AC y la Figura 8.1 muestran que Zona Oriente y Zona Centro están
+más asociadas a casas, mientras que Zona Oeste concentra una mayor proporción
+de apartamentos.
+
+## Zona vs. barrio
+
+Dado que `neighborhood` tiene `r length(unique(vivienda$neighborhood))`
+categorías, se conservan los 15 barrios con mayor número de propiedades y se
+agrupa el resto como "Otros" para que el mapa de correspondencia sea legible.
+
+```{r ca-zona-barrio}
+top_barrios <- vivienda |>
+  count(neighborhood, sort = TRUE) |>
+  slice_head(n = 15) |>
+  pull(neighborhood)
+
+vivienda$neighborhood_grouped <- ifelse(vivienda$neighborhood %in% top_barrios,
+                                         vivienda$neighborhood, "Otros")
+
+tabla_zona_barrio <- table(vivienda$zone, vivienda$neighborhood_grouped)
+chisq.test(tabla_zona_barrio)
+```
+
+**Figura 8.2.** Mapa de correspondencia entre zona y barrio
+
+```{r ca-zona-barrio-plot, fig.width=9, fig.height=7}
+res.ca2 <- CA(tabla_zona_barrio, graph = FALSE)
+fviz_ca_biplot(res.ca2, repel = TRUE) + labs(title = NULL)
+```
+
+```{r ca-varianza}
+res.ca2$eig
+```
+
+Los dos primeros ejes concentran la mayor parte de la varianza explicada, y el
+mapa evidencia que cada zona tiene barrios característicos, lo cual es
+esperable dado que los barrios están anidados dentro de una única zona de la
+ciudad.
+
+# Visualización geográfica
+
+Se usan `longitude` y `latitude` para ubicar las propiedades y contrastar
+visualmente la zona (Figura 9.2) con el segmento de conglomerados (Figura 9.1).
+Cada segmento se muestra en un panel separado (en vez de superponer los tres
+colores en un mismo mapa) porque, al estar presentes en toda la ciudad, los
+puntos de los tres segmentos se solapan demasiado si se dibujan juntos.
+
+**Figura 9.1.** Ubicación de las propiedades por segmento (un panel por
+segmento)
+
+```{r mapa-segmentos, fig.width=10, fig.height=4.5}
+ggplot(vivienda_cc, aes(x = longitude, y = latitude, color = segment)) +
+  geom_point(alpha = 0.5, size = 0.6) +
+  scale_color_manual(values = pal_cat, labels = etiquetas_segmento) +
+  coord_fixed() +
+  facet_wrap(~ segment, ncol = 3, labeller = as_labeller(etiquetas_segmento)) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none") +
+  labs(x = "Longitud", y = "Latitud")
+```
+
+**Figura 9.2.** Ubicación de las propiedades por zona
+
+```{r mapa-zona, fig.width=8, fig.height=7}
+ggplot(vivienda, aes(x = longitude, y = latitude, color = zone)) +
+  geom_point(alpha = 0.4, size = 0.8) +
+  scale_color_manual(values = pal_cat) +
+  coord_fixed() +
+  theme_minimal(base_size = 12) +
+  labs(x = "Longitud", y = "Latitud", color = "Zona")
+```
+
+A simple vista la Figura 9.1 podría sugerir que cada segmento tiene su propia
+zona, ya que los tres paneles muestran algo de agrupamiento espacial. Sin
+embargo, el segmento se calculó únicamente con variables físicas de la
+propiedad (precio, área, parqueaderos, baños, habitaciones) — la ubicación no
+participó en ese cálculo — por lo que conviene verificar la relación real con
+una tabla, en vez de comparar los mapas a simple vista.
+
+**Tabla 9.1.** Composición de cada zona por segmento (% de columna)
+
+```{r tabla-segmento-zona}
+tab_seg_zona <- table(vivienda_cc$segment, vivienda_cc$zone)
+pct_seg_zona <- round(prop.table(tab_seg_zona, margin = 2) * 100, 1) |>
+  as.data.frame.matrix()
+pct_seg_zona <- cbind(Segmento = etiquetas_segmento[rownames(pct_seg_zona)],
+                       pct_seg_zona)
+
+kable(pct_seg_zona, align = c("c", rep("c", 5)), row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+chisq.test(tab_seg_zona)
+```
+
+La Tabla 9.1 muestra que el segmento Económico domina en Zona Norte (65.2%) y
+Zona Sur (58.0%); el segmento Medio es más frecuente en Zona Centro (50.0%) y
+Zona Oriente (52.8%); y el segmento Premium, aunque minoritario en toda la
+ciudad, se concentra notablemente más en Zona Oeste (20.3% de sus propiedades)
+que en el resto (2.5% a 12.3%). La prueba chi-cuadrado rechaza la
+independencia entre segmento y zona ($\chi^2=$ `r round(chisq.test(tab_seg_zona)$statistic,1)`,
+p < 0.001). En conclusión, la ubicación **no determina** por sí sola el
+segmento de una propiedad — los tres segmentos están presentes en las cinco
+zonas — pero sí existe una asociación real, y Zona Oeste destaca como la zona
+con mayor concentración relativa de oferta premium.
+
+# Resultados y Recomendaciones
+
+El objetivo de la empresa es claro: usar estos datos para ganar ventaja
+competitiva, invertir mejor y aumentar la rentabilidad en un mercado que se
+mueve rápido. Con lo desarrollado en las secciones anteriores respondo aquí a
+las tres preguntas que realmente le sirven para decidir.
+
+## ¿Qué hace que una propiedad valga más?
+
+No es una sola variable, es tamaño construido, número de baños, parqueaderos y
+habitaciones moviéndose juntos: ese eje único explica el 65% de la
+variabilidad de toda la oferta (Sección 6, Figura 6.1). El precio en sí no es
+el mejor indicador para valorar una propiedad de forma aislada — el área
+construida y el número de parqueaderos lo explican mejor (correlación 0.68 y
+0.69, Sección 5). Para tasar o negociar un inmueble, la empresa debería mirar
+primero estas dos variables antes que compararlo solo por precio de lista.
+
+## ¿Cómo segmentar el inventario para no vender todo igual?
+
+El mercado no se divide en dos, se divide en tres: Económico
+(`r sum(km$cluster==1)` propiedades, ~279M y 98 m² en promedio), Medio
+(`r sum(km$cluster==2)`, ~548M y 232 m²) y Premium (`r sum(km$cluster==3)`,
+~1.130M y 427 m²) (Tabla 7.2). Son solo el `r round(mean(km$cluster==3)*100,1)`%
+del inventario pero mueven precios que multiplican por 4 el segmento
+económico — ahí está el margen, no en el volumen. Tratar estos tres grupos con
+la misma estrategia comercial es dejar plata sobre la mesa.
+
+## ¿Dónde debería invertir la empresa primero?
+
+En Zona Oeste. Ahí el segmento Premium representa el 20.3% de las propiedades,
+frente a apenas 2.5%-12.3% en el resto de la ciudad (Tabla 9.1,
+$\chi^2=$ `r round(chisq.test(tab_seg_zona)$statistic,1)`, p < 0.001) — es la
+única zona donde lo premium no es la excepción sino una porción real del
+mercado. Esa misma zona además concentra apartamentos más que casas (Sección
+8.1), así que el tipo de inventario a priorizar ahí es claro. Zona Norte y
+Zona Sur, en cambio, son volumen del segmento económico: sirven para rotación
+rápida, no para margen.
+
+**En resumen**: la empresa gana más analizando tamaño de propiedad (no
+precio de lista), tratando sus tres segmentos por separado, y apostando su
+inversión premium en Zona Oeste en vez de repartirla parejo por la ciudad.
+
+# Anexos
+
+```{r sesion}
+sessionInfo()
+```

@@ -3,6 +3,7 @@
 .Rhistory
 .RData
 .Ruserdata
+rsconnect/
 
 # Python virtual environment
 venv/
